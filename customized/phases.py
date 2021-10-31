@@ -61,14 +61,14 @@ class Training:
             out = model.forward(inputs)
 
             # calculate loss
-            print('--compute loss--')
-            print('targets', targets.shape)
-            print('input_lengths', input_lengths, type(input_lengths), input_lengths.shape)
-            print('target_lengths', target_lengths, type(target_lengths), target_lengths.shape)
-            print('out', out.shape)
-
             loss = self.criterion_func(out, targets, input_lengths, target_lengths)
             train_loss += loss.item()
+            print('--compute loss--')
+            print('targets', targets.shape)
+            print('input_lengths', input_lengths, input_lengths.shape)
+            print('target_lengths', target_lengths, target_lengths.shape)
+            print()
+            print('loss', loss.item())
 
             # compute backward pass
             loss.backward()
@@ -123,6 +123,7 @@ class Evaluation:
         logging.info(f'Running epoch {epoch}/{num_epochs} of evaluation...')
         val_loss = 0
         running_distance = 0
+        ctcdecode = self.ctcdecodehandler.ctcdecoder()
 
         with torch.no_grad():  # deactivate autograd engine to improve efficiency
 
@@ -140,18 +141,18 @@ class Evaluation:
                 out = model.forward(inputs)
 
                 # calculate validation loss
-                print('--compute loss--')
-                print('targets', targets.shape)
-                print('input_lengths', input_lengths, type(input_lengths), input_lengths.shape)
-                print('target_lengths', target_lengths, type(target_lengths), target_lengths.shape)
-                print('out', out.shape)
-
                 loss = self.criterion_func(out, targets, input_lengths, target_lengths)
                 val_loss += loss.item()
+                print('--compute loss--')
+                print('targets', targets.shape)
+                print('input_lengths', input_lengths, input_lengths.shape)
+                print('target_lengths', target_lengths, target_lengths.shape)
+                print('loss', loss.item())
+                print()
 
                 # calculate distance between actual and desired output
                 out = out.cpu().detach()  # extract from gpu
-                beam_results, beam_scores, timesteps, out_lens = decode_output(out, self.ctcdecodehandler.ctcdecoder())
+                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
                 distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
                 running_distance += distance
 

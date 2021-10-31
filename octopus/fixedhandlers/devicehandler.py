@@ -60,7 +60,7 @@ class DeviceHandler:
         """
 
         if self.device.type == 'cuda':
-            model = model.to(torch.device('cuda'))
+            model = model.to(device=torch.device('cuda'))
 
         return model
 
@@ -86,16 +86,17 @@ class DeviceHandler:
 
         # send input and targets to device
         if self.device.type == 'cuda':
-            inputs = inputs.to(torch.device('cuda'))
+            inputs = inputs.to(device=torch.device('cuda'))
 
             if targets is not None:
-                targets = targets.to(torch.device('cuda'))
+                targets = targets.to(device=torch.device('cuda'))
 
-        # validate that model and input/targets are on the same device
-        assert next(model.parameters()).device == inputs.device
-
-        if targets is not None:
-            assert inputs.device == targets.device
+        # TODO: PackedSequence does not have a device attribute, so this assertion is currently not possible
+        # # validate that model and input/targets are on the same device
+        # assert next(model.parameters()).device == inputs.device
+        #
+        # if targets is not None:
+        #     assert inputs.device == targets.device
 
         return inputs, targets
 
