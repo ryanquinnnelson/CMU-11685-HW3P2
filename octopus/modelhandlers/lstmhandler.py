@@ -26,4 +26,5 @@ class LstmHandler:
         if self.model_type == 'BasicLSTM':
             model = LSTM.BasicLSTM(self.input_size, self.hidden_size, self.num_layers,
                                    self.output_size, self.bidirectional, self.dropout)
+        logging.info(f'Model initialized:\n{model}')
         return model

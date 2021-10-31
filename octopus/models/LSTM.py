@@ -8,7 +8,7 @@ from torch.nn.utils.rnn import pad_packed_sequence
 
 
 # TODO Remove print statements
-class BasicLSTM:
+class BasicLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers,
                  output_size, bidirectional, dropout):
         super(BasicLSTM, self).__init__()

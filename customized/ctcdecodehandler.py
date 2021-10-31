@@ -31,7 +31,7 @@ class CTCDecodeHandler:
         logging.info('Initializing ctcdecode handler...')
 
         n_cpus = multiprocessing.cpu_count()
-        logging.info(f'Number of cpus:{n_cpus}.')
+        logging.info(f'CPU count:{n_cpus}.')
         self.num_processes = n_cpus
 
     def ctcdecoder(self):
