@@ -8,42 +8,33 @@ import logging
 import torch
 import numpy as np
 
-
-def _convert_output(out):
-    """
-    Convert 2D output to 1D a single class label.
-
-    Args:
-        out (np.array): 2D output in which each row is a datapoint and each column is a single class
-
-    Returns: np.array 1D output
-
-    """
-    out = np.argmax(out, axis=1)  # column with max value in each row is the index of the predicted label
-
-    return out
+import phoneme_list as pl
+from customized.helper import convert_to_phonemes, target_to_phonemes, convert_to_string, decode_output
 
 
-def _calculate_num_hits(out, actual):
-    """
-    Calculate the number of accurate labels, using the desired (actual) labels.
-    Args:
-        out (torch.FloatTensor) : 2D tensor representing model output
-        actual (torch.LongTensor): 1D tensor representing desired class labels
+def calculate_distances(beam_results, out_lens, targets):
+    import Levenshtein
+    n_batches = beam_results.shape[0]
+    logging.info(f'Calcuating distance for {n_batches} entries...')
+    distances = []
 
-    Returns: int representing number of accurate labels
+    for i in range(n_batches):
+        logging.info(f'targets[{i}]', targets[i])
+        out_converted = convert_to_phonemes(i, beam_results, out_lens, pl.PHONEME_LIST)
+        target_converted = target_to_phonemes(targets[i], pl.PHONEME_LIST)
+        logging.info('out_converted', out_converted)
+        logging.info('target_converted', target_converted)
 
-    """
-    # retrieve labels from device by converting to numpy arrays
-    actual = actual.cpu().detach().numpy()
+        out_str = convert_to_string(out_converted)
+        target_str = convert_to_string(target_converted)
+        logging.info('out_str', out_str)
+        logging.info('target_str', target_str)
 
-    # convert output to class labels
-    pred = _convert_output(out)
+        distance = Levenshtein.distance(out_str, target_str)
+        logging.info('distance', distance)
+        distances.append(distance)
 
-    # compare predictions against actual
-    n_hits = np.sum(pred == actual)
-
-    return n_hits
+    return np.array(distances).sum()
 
 
 class Evaluation:
@@ -51,7 +42,7 @@ class Evaluation:
     Defines an object to manage the evaluation phase of training.
     """
 
-    def __init__(self, val_loader, criterion_func, devicehandler):
+    def __init__(self, val_loader, criterion_func, devicehandler, ctcdecodehandler):
         """
         Initialize Evaluation object.
 
@@ -64,6 +55,7 @@ class Evaluation:
         self.val_loader = val_loader
         self.criterion_func = criterion_func
         self.devicehandler = devicehandler
+        self.ctcdecode = ctcdecodehandler.get_ctcdecoder()
 
     def evaluate_model(self, epoch, num_epochs, model):
         """
@@ -79,7 +71,7 @@ class Evaluation:
         """
         logging.info(f'Running epoch {epoch}/{num_epochs} of evaluation...')
         val_loss = 0
-        num_hits = 0
+        running_distance = 0
 
         with torch.no_grad():  # deactivate autograd engine to improve efficiency
 
@@ -87,7 +79,7 @@ class Evaluation:
             model.eval()
 
             # process mini-batches
-            for i, (inputs, targets) in enumerate(self.val_loader):
+            for i, (inputs, targets, input_lengths, target_lengths) in enumerate(self.val_loader):
                 # prep
                 inputs, targets = self.devicehandler.move_data_to_device(model, inputs, targets)
 
@@ -95,12 +87,20 @@ class Evaluation:
                 out = model.forward(inputs)
 
                 # calculate validation loss
-                loss = self.criterion_func(out, targets)
+                print('--compute loss--')
+                print('targets', targets.shape)
+                print('input_lengths', input_lengths, type(input_lengths), input_lengths.shape)
+                print('target_lengths', target_lengths, type(target_lengths), target_lengths.shape)
+                print('out', out.shape)
+
+                loss = self.criterion_func(out, targets, input_lengths, target_lengths)
                 val_loss += loss.item()
 
-                # calculate number of accurate predictions for this batch
-                out = out.cpu().detach().numpy()  # extract from gpu
-                num_hits += _calculate_num_hits(out, targets)
+                # calculate distance between actual and desired output
+                out = out.cpu().detach()  # extract from gpu
+                beam_results, beam_scores, timesteps, out_lens = decode_output(out, self.ctcdecode)
+                distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
+                running_distance += distance
 
                 # delete mini-batch from device
                 del inputs
@@ -108,79 +108,6 @@ class Evaluation:
 
             # calculate evaluation metrics
             val_loss /= len(self.val_loader)  # average per mini-batch
-            val_acc = num_hits / len(self.val_loader.dataset)
+            avg_distance = running_distance / len(self.val_loader.dataset)
 
-            return val_loss, val_acc
-
-
-class EvaluationCenterLoss:
-    """
-    Defines an object to manage the evaluation phase of training in the case of using centerloss.
-    """
-
-    def __init__(self, val_loader, label_criterion_func, centerloss_func, centerloss_weight, devicehandler):
-        """
-        Initialize Evaluation object.
-
-        Args:
-            val_loader (DataLoader): DataLoader for validation dataset
-            label_criterion_func (class): loss function for labels
-            centerloss_func (class): loss function for centerloss
-            centerloss_weight (float): importance of centerloss in overall loss calculation
-            devicehandler (DeviceHandler): object to manage interaction of model/data and device
-        """
-        logging.info('Loading evaluation phase...')
-        self.val_loader = val_loader
-        self.label_criterion_func = label_criterion_func
-        self.centerloss_func = centerloss_func
-        self.centerloss_weight = centerloss_weight
-        self.devicehandler = devicehandler
-
-    def evaluate_model(self, epoch, num_epochs, model):
-        """
-        Perform evaluation phase of training.
-
-        Args:
-            epoch (int): Epoch being trained
-            num_epochs (int): Total number of epochs to be trained
-            model (nn.Module): model being trained
-
-        Returns: Tuple (float,float) representing (val_loss, val_metric)
-
-        """
-        logging.info(f'Running epoch {epoch}/{num_epochs} of evaluation...')
-        val_loss = 0
-        num_hits = 0
-
-        with torch.no_grad():  # deactivate autograd engine to improve efficiency
-
-            # Set model in validation mode
-            model.eval()
-
-            # process mini-batches
-            for i, (inputs, targets) in enumerate(self.val_loader):
-                # prep
-                inputs, targets = self.devicehandler.move_data_to_device(model, inputs, targets)
-
-                # forward pass
-                feature, outputs = model.forward(inputs, return_embedding=True)
-
-                # calculate validation loss
-                l_loss = self.label_criterion_func(outputs, targets)
-                c_loss = self.centerloss_func(feature, targets)
-                loss = l_loss + c_loss * self.centerloss_weight
-                val_loss += loss.item()
-
-                # calculate number of accurate predictions for this batch
-                outputs = outputs.cpu().detach().numpy()  # extract from gpu
-                num_hits += _calculate_num_hits(outputs, targets)
-
-                # delete mini-batch from device
-                del inputs
-                del targets
-
-            # calculate evaluation metrics
-            val_loss /= len(self.val_loader)  # average per mini-batch
-            val_acc = num_hits / len(self.val_loader.dataset)
-
-            return val_loss, val_acc
+            return val_loss, avg_distance

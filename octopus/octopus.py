@@ -6,6 +6,8 @@ __author__ = 'ryanquinnnelson'
 import logging
 import os
 import sys
+import subprocess
+import multiprocessing
 
 # execute before loading torch
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"  # better error tracking from gpu
@@ -23,16 +25,19 @@ from octopus.fixedhandlers.statshandler import StatsHandler
 from octopus.fixedhandlers.phasehandler import PhaseHandler
 from octopus.fixedhandlers.dataloaderhandler import DataLoaderHandler
 from octopus.fixedhandlers.outputhandler import OutputHandler
-from octopus.datasethandlers.imagedatasethandler import ImageDatasetHandler
-from octopus.modelhandlers.cnnhandler import CnnHandler
-from octopus.modelhandlers.resnethandler import ResnetHandler, ResnetHandlerCenterLoss
-from octopus.phases.training import Training, TrainingCenterLoss
+from octopus.fixedhandlers.piphandler import PipHandler
+from octopus.datasethandlers.numberdatasethandler import NumbersDatasetHandler
+from octopus.modelhandlers.lstmhandler import LstmHandler
+from octopus.phases.training import Training
 from octopus.phases.testing import Testing
 
 # customized to this data
 from customized.formatters import OutputFormatter
-from customized.evaluation import Evaluation, EvaluationCenterLoss
-from customized.verification import Verification
+from customized.evaluation import Evaluation
+from customized.datasets import TrainValDataset, TestDataset
+import customized.datasets as customized_datasets
+from customized.ctcdecodehandler import CTCDecodeHandler
+import customized.phoneme_list as phoneme_list
 
 
 class Octopus:
@@ -60,23 +65,28 @@ class Octopus:
         # connectors
         self.kaggleconnector, self.wandbconnector = initialize_connectors(config)
 
+        # ctc decoder
+        n_cpus = multiprocessing.cpu_count()
+        logging.info(f'Number of cpus:{n_cpus}.')
+        self.ctcdecodehandler = CTCDecodeHandler(phoneme_list.PHONEME_LIST,
+                                                 config['CTCDecode']['model_path'],
+                                                 config['CTCDecode'].getint('alpha'),
+                                                 config['CTCDecode'].getint('beta'),
+                                                 config['CTCDecode'].getint('cutoff_top_n'),
+                                                 config['CTCDecode'].getfloat('cutoff_prob'),
+                                                 config['CTCDecode'].getint('beam_width'),
+                                                 n_cpus,
+                                                 config['CTCDecode'].getint('blank_id'),
+                                                 config['CTCDecode'].getboolean('log_probs_input')
+                                                 )
+
         # fixed handlers
-        self.checkpointhandler, self.criterionhandler, self.dataloaderhandler, self.devicehandler, \
+        self.piphandler, self.checkpointhandler, self.criterionhandler, self.dataloaderhandler, self.devicehandler, \
         self.optimizerhandler, self.outputhandler, self.schedulerhandler, self.statshandler, \
-        self.phasehandler = initialize_fixed_handlers(config, self.wandbconnector)
-
-        if self.config['hyperparameters']['criterion_type'] == 'CenterLoss':
-            logging.info('Initializing second set of components to complement CenterLoss components...')
-            self.criterionhandler2 = CriterionHandler('CrossEntropyLoss')
-
-            self.optimizerhandler2 = OptimizerHandler('SGD',
-                                                      _to_float_dict(config['hyperparameters']['optimizer2_kwargs']))
-        else:
-            self.criterionhandler2 = None
-            self.optimizerhandler2 = None
+        self.phasehandler = initialize_fixed_handlers(config, self.wandbconnector, self.ctcdecodehandler)
 
         # variable handlers
-        self.inputhandler, self.modelhandler, self.verification = initialize_variable_handlers(config)
+        self.inputhandler, self.modelhandler = initialize_variable_handlers(config)
 
         logging.info('octopus initialization is complete.')
 
@@ -108,7 +118,10 @@ class Octopus:
         self.devicehandler.setup()
 
         # dataloaders
-        self.dataloaderhandler.setup(self.devicehandler.device)
+        self.dataloaderhandler.setup(self.devicehandler.device, self.inputhandler)
+
+        # pip modules
+        self.piphandler.install_modules()
 
         logging.info('octopus has finished setting up the environment.')
 
@@ -126,7 +139,6 @@ class Octopus:
             logging.info('octopus is not downloading data.')
             logging.info(f'octopus expects data to be available in {self.inputhandler.data_dir}.')
 
-# TODO: assign model to output of move_model_to_device()
     def run_pipeline(self):
         """
         Runs the deep learning pipeline. Builds model, moves model to device (if GPU), setups up wandb to watch the
@@ -144,66 +156,24 @@ class Octopus:
 
         # initialize model
         model = self.modelhandler.get_model()
-        self.devicehandler.move_model_to_device(model)  # move model before initializing optimizer - see Note 1
+        model = self.devicehandler.move_model_to_device(model)  # move model before initializing optimizer - see Note 1
         self.wandbconnector.watch(model)
 
-        if self.config['kaggle']['competition'] == 'idl-fall21-hw2p2s2-face-verification':
-            # initialize model components
-            optimizer = self.optimizerhandler.get_optimizer(model)
-            scheduler = self.schedulerhandler.get_scheduler(optimizer)
+        # initialize model components
+        loss_func = self.criterionhandler.get_loss_function()
+        optimizer = self.optimizerhandler.get_optimizer(model)
+        scheduler = self.schedulerhandler.get_scheduler(optimizer)
 
-            self.phasehandler.run_verification(model, optimizer, scheduler, self.verification)
+        # load data
+        train_loader, val_loader, test_loader = self.dataloaderhandler.load(self.inputhandler)
 
-        elif self.config['hyperparameters']['criterion_type'] == 'CenterLoss':
+        # load phases
+        training = Training(train_loader, loss_func, self.devicehandler)
+        evaluation = Evaluation(val_loader, loss_func, self.devicehandler, self.ctcdecodehandler)
+        testing = Testing(test_loader, self.devicehandler)
 
-            # num_classes, feat_dim, device
-            centerloss_args = {
-                'num_classes': self.config['model'].getint('num_classes'),
-                'feat_dim': self.config['model'].getint('feat_dim'),
-                'device': self.devicehandler.device}
-
-            # initialize model components
-            centerloss_criterion_cls = self.criterionhandler.get_loss_function(**centerloss_args)
-            label_criterion_func = self.criterionhandler2.get_loss_function()
-
-            centerloss_optimizer = self.optimizerhandler.get_optimizer(centerloss_criterion_cls)
-            label_optimizer = self.optimizerhandler2.get_optimizer(model)
-
-            centerloss_scheduler = self.schedulerhandler.get_scheduler(centerloss_optimizer)
-            label_scheduler = self.schedulerhandler.get_scheduler(label_optimizer)
-
-            # load data
-            train_loader, val_loader, test_loader = self.dataloaderhandler.load(self.inputhandler)
-
-            # load phases
-            centerloss_weight = self.config['hyperparameters'].getfloat('centerloss_weight')
-            training = TrainingCenterLoss(train_loader, label_criterion_func, centerloss_criterion_cls,
-                                          centerloss_weight, self.devicehandler)
-            evaluation = EvaluationCenterLoss(val_loader, label_criterion_func, centerloss_criterion_cls,
-                                              centerloss_weight, self.devicehandler)
-            testing = Testing(test_loader, self.devicehandler)
-
-            # run epochs
-            self.phasehandler.process_epochs_centerloss(model, label_optimizer, centerloss_optimizer, label_scheduler,
-                                                        centerloss_scheduler, training, evaluation,
-                                                        testing)
-        else:
-
-            # initialize model components
-            loss_func = self.criterionhandler.get_loss_function()
-            optimizer = self.optimizerhandler.get_optimizer(model)
-            scheduler = self.schedulerhandler.get_scheduler(optimizer)
-
-            # load data
-            train_loader, val_loader, test_loader = self.dataloaderhandler.load(self.inputhandler)
-
-            # load phases
-            training = Training(train_loader, loss_func, self.devicehandler)
-            evaluation = Evaluation(val_loader, loss_func, self.devicehandler)
-            testing = Testing(test_loader, self.devicehandler)
-
-            # run epochs
-            self.phasehandler.process_epochs(model, optimizer, scheduler, training, evaluation, testing)
+        # run epochs
+        self.phasehandler.process_epochs(model, optimizer, scheduler, training, evaluation, testing)
 
         logging.info('octopus has finished running the pipeline.')
 
@@ -321,7 +291,7 @@ def initialize_connectors(config):
     return kaggleconnector, wandbconnector
 
 
-def initialize_fixed_handlers(config, wandbconnector):
+def initialize_fixed_handlers(config, wandbconnector, ctcdecodehandler):
     """
     Initializes all object handlers that remain the same regardless of changes to data.
     Args:
@@ -332,6 +302,13 @@ def initialize_fixed_handlers(config, wandbconnector):
            optimizerhandler, outputhandler, schedulerhandler, statshandler, phasehandler)
 
     """
+
+    # pip
+    if config.has_option('pip', 'modules'):
+        modules_list = _to_string_list(config['pip']['modules'])
+    else:
+        modules_list = None
+    piphandler = PipHandler(modules_list)
 
     # checkpoints
     checkpointhandler = CheckpointHandler(config['checkpoint']['checkpoint_dir'],
@@ -382,11 +359,11 @@ def initialize_fixed_handlers(config, wandbconnector):
                                 checkpointhandler,
                                 schedulerhandler,
                                 wandbconnector,
-                                OutputFormatter(config['data']['data_dir']),
+                                OutputFormatter(config['data']['data_dir'], ctcdecodehandler),
                                 config['checkpoint'].getboolean('load_from_checkpoint'),
                                 checkpoint_file)
 
-    return checkpointhandler, criterionhandler, dataloaderhandler, devicehandler, \
+    return piphandler, checkpointhandler, criterionhandler, dataloaderhandler, devicehandler, \
            optimizerhandler, outputhandler, schedulerhandler, statshandler, phasehandler
 
 
@@ -402,45 +379,33 @@ def initialize_variable_handlers(config):
 
     """
     # input
-    if config['data']['data_type'] == 'image':
-        inputhandler = ImageDatasetHandler(config['data']['data_dir'],
-                                           config['data']['train_dir'],
-                                           config['data']['val_dir'],
-                                           config['data']['test_dir'],
-                                           _to_string_list(config['dataloader']['transforms_list']))
+    if config['data']['data_type'] == 'numbers':
+        inputhandler = NumbersDatasetHandler(config['data']['data_dir'],
+                                             config['data']['train_data'],
+                                             config['data']['train_labels'],
+                                             config['data']['val_data'],
+                                             config['data']['val_labels'],
+                                             config['data']['test_data'],
+                                             TrainValDataset,
+                                             TrainValDataset,
+                                             TestDataset,
+                                             customized_datasets.trainval_collate_fn,
+                                             customized_datasets.trainval_collate_fn,
+                                             customized_datasets.test_collate_fn)
     else:
         inputhandler = None
 
     # model
-    if config['model']['model_type'] == 'CNN2d':
-        modelhandler = CnnHandler(config['model']['model_type'],
-                                  config['model'].getint('input_size'),
-                                  config['model'].getint('output_size'),
-                                  config['model']['activation_func'],
-                                  config['model'].getboolean('batch_norm'),
-                                  _to_int_dict(config['model']['conv_kwargs']),
-                                  config['model']['pool_class'],
-                                  _to_int_dict(config['model']['pool_kwargs']))
-    elif 'Resnet' in config['model']['model_type']:
-
-        if config['hyperparameters']['criterion_type'] == 'CenterLoss':
-            modelhandler = ResnetHandlerCenterLoss(config['model']['model_type'],
-                                                   config['model'].getint('in_features'),
-                                                   config['model'].getint('num_classes'),
-                                                   config['model'].getint('feat_dim'))
-        else:
-            modelhandler = ResnetHandler(config['model']['model_type'],
-                                         config['model'].getint('in_features'),
-                                         config['model'].getint('num_classes'))
+    if config['model']['model_type'] == 'LSTM':
+        modelhandler = LstmHandler(config['model']['model_type'],
+                                   config['model'].getint('input_size'),
+                                   config['model'].getint('hidden_size'),
+                                   config['model'].getint('num_layers'),
+                                   config['model'].getint('output_size'),
+                                   config['model'].getboolean('bidirectional'),
+                                   config['model'].getfloat('dropout'))
 
     else:
         modelhandler = None
 
-    # verification
-    if config['kaggle']['competition'] == 'idl-fall21-hw2p2s2-face-verification':
-        verification = Verification(config['data']['data_dir'], config['output']['output_dir'],
-                                    config['DEFAULT']['run_name'])
-    else:
-        verification = None
-
-    return inputhandler, modelhandler, verification
+    return inputhandler, modelhandler

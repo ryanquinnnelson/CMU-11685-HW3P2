@@ -46,19 +46,10 @@ class Testing:
             model.eval()
 
             # process mini-batches
-            for i, batch in enumerate(self.test_loader):
-
-                if type(batch) is tuple:
-                    # loader contains inputs and targets
-                    inputs = batch[0]
-                    targets = batch[1]
-                else:
-                    # loader contains only inputs
-                    inputs = batch
-                    targets = None
+            for i, (inputs, input_lengths) in enumerate(self.test_loader):
 
                 # prep
-                inputs, targets = self.devicehandler.move_data_to_device(model, inputs, targets)
+                inputs, targets = self.devicehandler.move_data_to_device(model, inputs, None)
 
                 # forward pass
                 out = model.forward(inputs)

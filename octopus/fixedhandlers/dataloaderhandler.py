@@ -34,7 +34,7 @@ class DataLoaderHandler:
         self.val_args = None
         self.test_args = None
 
-    def setup(self, device):
+    def setup(self, device, inputhandler):
         """
         Set DataLoader hyperparameters based on device. Use the same values for validation and test DataLoader
         hyperparameters.
@@ -49,23 +49,36 @@ class DataLoaderHandler:
             self.train_args = dict(shuffle=True,
                                    batch_size=self.batch_size,
                                    num_workers=self.num_workers,
-                                   pin_memory=self.pin_memory)
+                                   pin_memory=self.pin_memory,
+                                   collate_fn=inputhandler.train_collate_fn)
         else:
             self.train_args = dict(shuffle=True,
-                                   batch_size=self.batch_size)
+                                   batch_size=self.batch_size,
+                                   collate_fn=inputhandler.train_collate_fn)
 
         # set arguments based on GPU or CPU destination
         if device.type == 'cuda':
             self.val_args = dict(shuffle=False,
                                  batch_size=self.batch_size,
                                  num_workers=self.num_workers,
-                                 pin_memory=self.pin_memory)
+                                 pin_memory=self.pin_memory,
+                                 collate_fn=inputhandler.val_collate_fn)
         else:
             self.val_args = dict(shuffle=False,
-                                 batch_size=self.batch_size)
+                                 batch_size=self.batch_size,
+                                 collate_fn=inputhandler.val_collate_fn)
 
         # same as validation set
-        self.test_args = self.val_args
+        if device.type == 'cuda':
+            self.test_args = dict(shuffle=False,
+                                  batch_size=self.batch_size,
+                                  num_workers=self.num_workers,
+                                  pin_memory=self.pin_memory,
+                                  collate_fn=inputhandler.test_collate_fn)
+        else:
+            self.test_args = dict(shuffle=False,
+                                  batch_size=self.batch_size,
+                                  collate_fn=inputhandler.test_collate_fn)
 
         logging.info(f'DataLoader settings for training dataset:{self.train_args}')
         logging.info(f'DataLoader settings for validation dataset:{self.val_args}')

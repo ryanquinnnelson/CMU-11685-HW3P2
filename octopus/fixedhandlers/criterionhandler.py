@@ -24,7 +24,7 @@ class CriterionHandler:
         logging.info('Initializing criterion handling...')
         self.criterion_type = criterion_type
 
-    def get_loss_function(self, **kwargs):
+    def get_loss_function(self):
         """
         Obtain the desired loss function.
 
@@ -38,9 +38,8 @@ class CriterionHandler:
         if self.criterion_type == 'CrossEntropyLoss':
             criterion = nn.CrossEntropyLoss()
 
-        elif self.criterion_type == 'CenterLoss':
-            print(kwargs)
-            criterion = CenterLoss(**kwargs)
+        elif self.criterion_type == 'CTCLoss':
+            criterion = nn.CTCLoss()
 
         logging.info(f'Criterion is set:{criterion}.')
         return criterion
