@@ -163,6 +163,7 @@ class Octopus:
         loss_func = self.criterionhandler.get_loss_function()
         optimizer = self.optimizerhandler.get_optimizer(model)
         scheduler = self.schedulerhandler.get_scheduler(optimizer)
+        # ?? should I move criterion to device too?
 
         # load data
         train_loader, val_loader, test_loader = self.dataloaderhandler.load(self.inputhandler)

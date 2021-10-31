@@ -9,6 +9,7 @@ import json
 import logging
 import os
 from customized.helper import convert_to_phonemes, target_to_phonemes, convert_to_string, decode_output
+import phoneme_list as pl
 
 
 class OutputFormatter:
@@ -35,27 +36,30 @@ class OutputFormatter:
         Returns: DataFrame after formatting
 
         """
-        # labels = _convert_output(out)
-        #
-        # # add an index column
-        # df = pd.DataFrame(labels).reset_index(drop=False)
-        #
-        # # change column names
-        # df = df.rename(columns={0: "output_label", 'index': 'idprefix'})
-        #
-        # # add .jpg to the id column
-        # df = df.astype({'idprefix': 'str'})
-        # df['idsuffix'] = '.jpg'
-        # df['id'] = df['idprefix'] + df['idsuffix']
-        #
-        # # drop extra columns generated
-        # df = df.drop(['idprefix', 'idsuffix'], axis=1)
-        #
-        # # remap output labels to correct labels based on ImageFolder (see Note 1 in imagedatasethandler)
-        # mapping = self._read_class_to_idx_json()
-        # df['label'] = df.apply(lambda x: list(mapping.keys())[list(mapping.values()).index(x['output_label'])], axis=1)
-        #
-        # # ensure id is first column
-        # df = df[['id', 'label', 'output_label']]
+
+        converted = []
+
+        logging.info('out shape', out.shape)
+
+        # decode output
+        beam_results, beam_scores, timesteps, out_lens = decode_output(out, self.ctcdecode)
+
+        # convert to strings using phoneme map
+        n_batches = beam_results.shape[0]
+        logging.info(f'Converting {n_batches} beam results to phonemes...')
+
+        for i in range(n_batches):
+            out_converted = convert_to_phonemes(i, beam_results, out_lens, pl.PHONEME_MAP)
+            logging.info('out_converted', out_converted)
+            converted.append(out_converted)
+
+        # convert string array to dataframe
+        df = pd.DataFrame(converted).reset_index(drop=False)
+        logging.info(df.head())
+        logging.info(df.columns)
+
+        # change column names
+        df = df.rename(columns={0: "label", 'index': 'id'})
+        logging.info(df.head())
 
         return df
