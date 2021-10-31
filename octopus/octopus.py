@@ -6,13 +6,12 @@ __author__ = 'ryanquinnnelson'
 import logging
 import os
 import sys
-import subprocess
 
 # execute before loading torch
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"  # better error tracking from gpu
 
 # reusable local modules
-from octopus.helper import _to_string_list, _to_float_dict, _to_int_dict
+from octopus.helper import _to_string_list, _to_float_dict
 from octopus.connectors.kaggleconnector import KaggleConnector
 from octopus.connectors.wandbconnector import WandbConnector
 from octopus.fixedhandlers.checkpointhandler import CheckpointHandler
@@ -27,16 +26,13 @@ from octopus.fixedhandlers.outputhandler import OutputHandler
 from octopus.fixedhandlers.piphandler import PipHandler
 from octopus.datasethandlers.numericaldatasethandler import NumericalDatasetHandler
 from octopus.modelhandlers.lstmhandler import LstmHandler
-from octopus.phases.training import Training
-from octopus.phases.testing import Testing
 
 # customized to this data
+from customized.phases import Training, Evaluation, Testing
 from customized.formatters import OutputFormatter
-from customized.evaluation import Evaluation
 from customized.datasets import TrainValDataset, TestDataset
 import customized.datasets as customized_datasets
 from customized.ctcdecodehandler import CTCDecodeHandler
-import customized.phoneme_list as pl
 
 
 class Octopus:
@@ -65,9 +61,17 @@ class Octopus:
         self.kaggleconnector, self.wandbconnector = initialize_connectors(config)
 
         # fixed handlers
-        self.piphandler, self.checkpointhandler, self.criterionhandler, self.dataloaderhandler, self.devicehandler, \
-        self.optimizerhandler, self.outputhandler, self.schedulerhandler, self.statshandler, \
-        self.phasehandler = initialize_fixed_handlers(config, self.wandbconnector)
+        fixedhandlers = initialize_fixed_handlers(config, self.wandbconnector)
+        self.piphandler = fixedhandlers[0]
+        self.checkpointhandler = fixedhandlers[1]
+        self.criterionhandler = fixedhandlers[2]
+        self.dataloaderhandler = fixedhandlers[3]
+        self.devicehandler = fixedhandlers[4]
+        self.optimizerhandler = fixedhandlers[5]
+        self.outputhandler = fixedhandlers[6]
+        self.schedulerhandler = fixedhandlers[7]
+        self.statshandler = fixedhandlers[8]
+        self.phasehandler = fixedhandlers[9]
 
         # variable handlers
         self.inputhandler, self.modelhandler, self.ctcdecodehandler = initialize_variable_handlers(config)
@@ -138,7 +142,7 @@ class Octopus:
         # initialize model components
         self.loss_func = self.criterionhandler.get_loss_function()
         self.optimizer = self.optimizerhandler.get_optimizer(self.model)
-        scheduler = self.schedulerhandler.get_scheduler(self.optimizer)
+        self.scheduler = self.schedulerhandler.get_scheduler(self.optimizer)
         # ?? should I move criterion to device too?
 
         # load data
@@ -358,8 +362,8 @@ def initialize_fixed_handlers(config, wandbconnector):
                                 config['checkpoint'].getboolean('load_from_checkpoint'),
                                 checkpoint_file)
 
-    return piphandler, checkpointhandler, criterionhandler, dataloaderhandler, devicehandler, \
-           optimizerhandler, outputhandler, schedulerhandler, statshandler, phasehandler
+    return piphandler, checkpointhandler, criterionhandler, dataloaderhandler, devicehandler, optimizerhandler, \
+           outputhandler, schedulerhandler, statshandler, phasehandler
 
 
 # TODO add alternative input and model handlers for MLP
@@ -384,9 +388,9 @@ def initialize_variable_handlers(config):
                                                TrainValDataset,
                                                TrainValDataset,
                                                TestDataset,
-                                               customized_datasets.trainval_collate_fn,
-                                               customized_datasets.trainval_collate_fn,
-                                               customized_datasets.test_collate_fn)
+                                               customized_datasets.collate_fn_trainval,
+                                               customized_datasets.collate_fn_trainval,
+                                               customized_datasets.collate_fn_test)
     else:
         inputhandler = None
 
@@ -404,8 +408,7 @@ def initialize_variable_handlers(config):
         modelhandler = None
 
     # ctc decoder
-    ctcdecodehandler = CTCDecodeHandler(pl.PHONEME_LIST,
-                                        config['CTCDecode']['model_path'],
+    ctcdecodehandler = CTCDecodeHandler(config['CTCDecode']['model_path'],
                                         config['CTCDecode'].getint('alpha'),
                                         config['CTCDecode'].getint('beta'),
                                         config['CTCDecode'].getint('cutoff_top_n'),

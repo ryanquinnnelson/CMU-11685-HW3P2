@@ -8,7 +8,7 @@ from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from torch.utils.data import Dataset
 
 
-def trainval_collate_fn(batch):
+def collate_fn_trainval(batch):
     # Pad sequences to have the same number of rows per utterance
     # print(type(batch))
     # print(len(batch))
@@ -78,10 +78,9 @@ class TrainValDataset(Dataset):
 
         return x, y
 
+
     # ?? why sort batch
-
-
-def test_collate_fn(batch):
+def collate_fn_test(batch):
     # TODO: Pad X
     # print(type(batch))
     # print(len(batch))
@@ -127,3 +126,4 @@ class TestDataset(Dataset):
     def __getitem__(self, index):
         x = torch.FloatTensor(self.X[index])
         return x
+
