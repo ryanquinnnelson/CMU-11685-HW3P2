@@ -2,6 +2,7 @@
 Contains all Dataset objects customized to the data.
 """
 __author__ = 'ryanquinnnelson'
+
 import logging
 
 import torch
@@ -31,10 +32,10 @@ def collate_fn_trainval(batch):
 
     logging.info('--collate--')
     for i, b in enumerate(batch):
-        logging.info(f'x_{i}', b[0].shape, f'y_{i}', b[1].shape)
-    logging.info('lengths_x', lengths_x, 'lengths_y', lengths_y)
-    logging.info('pad_batch_x', pad_batch_x.shape)
-    logging.info('pad_batch_y', pad_batch_y.shape)
+        logging.info(f'x_{i}:{b[0].shape}, y_{i}:{b[1].shape}')
+    logging.info(f'lengths_x:{lengths_x},lengths_y:{lengths_y}')
+    logging.info(f'pad_batch_x:{pad_batch_x.shape}')
+    logging.info(f'pad_batch_y:{pad_batch_y.shape}')
     logging.info('packed_batch_x')
     logging.info('')
 

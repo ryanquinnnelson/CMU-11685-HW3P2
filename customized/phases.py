@@ -4,8 +4,7 @@ All things related to training phases.
 
 import numpy as np
 
-from customized.helper import decode_output, \
-    calculate_distances
+from customized.helper import decode_output, calculate_distances
 
 import logging
 import torch
@@ -66,12 +65,12 @@ class Training:
             # calculate loss
             loss = self.criterion_func(out, targets, input_lengths, target_lengths)
             train_loss += loss.item()
-            # logging.info('--compute loss--')
-            # logging.info('targets', targets.shape)
-            # logging.info('input_lengths', input_lengths, input_lengths.shape)
-            # logging.info('target_lengths', target_lengths, target_lengths.shape)
-            # logging.info('')
-            # logging.info('loss', loss.item())
+            logging.info('--compute loss--')
+            logging.info(f'targets:{ targets.shape}')
+            logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}' )
+            logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
+            logging.info(f'loss:{ loss.item()}')
+            logging.info('')
 
             # compute backward pass
             loss.backward()
@@ -145,19 +144,19 @@ class Evaluation:
                 # calculate validation loss
                 loss = self.criterion_func(out, targets, input_lengths, target_lengths)
                 val_loss += loss.item()
-                # logging.info('--compute loss--')
-                # logging.info('targets', targets.shape)
-                # logging.info('input_lengths', input_lengths, input_lengths.shape)
-                # logging.info('target_lengths', target_lengths, target_lengths.shape)
-                # logging.info('loss', loss.item())
-                # logging.info('')
+                logging.info('--compute loss--')
+                logging.info(f'targets:{targets.shape}')
+                logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}')
+                logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
+                logging.info(f'loss:{loss.item()}')
+                logging.info('')
 
                 # calculate distance between actual and desired output
                 out = out.cpu().detach()  # extract from gpu
-                logging.info('out detached', out.shape)
-                # beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
-                # distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
-                # running_distance += distance
+                logging.info(f'out detached:{out.shape}')
+                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
+                distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
+                running_distance += distance
 
                 # delete mini-batch from device
                 del inputs

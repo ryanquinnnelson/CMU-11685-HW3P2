@@ -13,9 +13,9 @@ def convert_to_phonemes(i, beam_results, out_lens, phoneme_list):
     beam = beam.cpu().numpy()
     converted = np.array([phoneme_list[idx] for idx in beam.flatten()])
 
-    logging.info('beam array', beam.shape)
-    logging.info('beam tensor', beam.shape)
-    logging.info('converted', converted.shape)
+    logging.info(f'beam array:{beam.shape}')
+    logging.info(f'beam tensor:{beam.shape}')
+    logging.info(f'converted:{converted.shape}')
     return converted
 
 
@@ -32,14 +32,14 @@ def convert_to_string(converted_list):
 def decode_output(out, ctcdecode):
     # decode requires BATCHSIZE x N_TIMESTEPS x N_LABELS
     out = torch.transpose(out, 0, 1)
-    logging.info('out transposed', out.shape)
+    logging.info(f'out transposed:{out.shape}')
 
     # decode batch
     beam_results, beam_scores, timesteps, out_lens = ctcdecode.decode(out)
-    logging.info('beam_results', beam_results.shape)  # BATCHSIZE x N_BEAMS X N_TIMESTEPS
-    logging.info('beam_scores', beam_scores.shape)  # BATCHSIZE x N_BEAMS
-    logging.info('timesteps', timesteps.shape)  # BATCHSIZE x N_BEAMS
-    logging.info('out_lens', out_lens.shape)  # BATCHSIZE x N_BEAMS
+    logging.info(f'beam_results:{beam_results.shape}')  # BATCHSIZE x N_BEAMS X N_TIMESTEPS
+    logging.info(f'beam_scores:{beam_scores.shape}')  # BATCHSIZE x N_BEAMS
+    logging.info(f'timesteps:{timesteps.shape}')  # BATCHSIZE x N_BEAMS
+    logging.info(f'out_lens:{out_lens.shape}')  # BATCHSIZE x N_BEAMS
 
     return beam_results, beam_scores, timesteps, out_lens
 
@@ -60,11 +60,11 @@ def calculate_distances(beam_results, out_lens, targets):
         distance = Levenshtein.distance(out_str, target_str)
         distances.append(distance)
 
-        logging.info(f'targets[{i}]', targets[i])
-        logging.info('out_converted', out_converted)
-        logging.info('target_converted', target_converted)
-        logging.info('out_str', out_str)
-        logging.info('target_str', target_str)
-        logging.info('distance', distance)
+        logging.info(f'targets[{i}]:{targets[i]}')
+        logging.info(f'out_converted:{out_converted}')
+        logging.info(f'target_converted:{target_converted}')
+        logging.info(f'out_str:{out_str}')
+        logging.info(f'target_str:{target_str}')
+        logging.info(f'distance:{distance}')
 
     return np.array(distances).sum()

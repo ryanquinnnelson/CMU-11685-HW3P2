@@ -4,10 +4,7 @@ Contains all Formatter objects customized to the data.
 __author__ = 'ryanquinnnelson'
 
 import pandas as pd
-import numpy as np
-import json
 import logging
-import os
 from customized.helper import convert_to_phonemes, target_to_phonemes, convert_to_string, decode_output
 import customized.phoneme_list as pl
 
@@ -38,7 +35,7 @@ class OutputFormatter:
 
         converted = []
 
-        logging.info('out shape', out.shape)
+        logging.info(f'out shape:{ out.shape}')
 
         # decode output
         beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
@@ -49,7 +46,7 @@ class OutputFormatter:
 
         for i in range(n_batches):
             out_converted = convert_to_phonemes(i, beam_results, out_lens, pl.PHONEME_MAP)
-            logging.info('out_converted', out_converted)
+            logging.info(f'out_converted:{out_converted}')
             converted.append(out_converted)
 
         # convert string array to dataframe
