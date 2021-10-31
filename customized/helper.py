@@ -13,9 +13,9 @@ def convert_to_phonemes(i, beam_results, out_lens, phoneme_list):
     beam = beam.cpu().numpy()
     converted = np.array([phoneme_list[idx] for idx in beam.flatten()])
 
-    print('beam array', beam.shape)
-    print('beam tensor', beam.shape)
-    print('converted', converted.shape)
+    logging.info('beam array', beam.shape)
+    logging.info('beam tensor', beam.shape)
+    logging.info('converted', converted.shape)
     return converted
 
 
@@ -30,16 +30,16 @@ def convert_to_string(converted_list):
 
 
 def decode_output(out, ctcdecode):
-
     # decode requires BATCHSIZE x N_TIMESTEPS x N_LABELS
     out = torch.transpose(out, 0, 1)
+    logging.info('out transposed', out.shape)
 
     # decode batch
     beam_results, beam_scores, timesteps, out_lens = ctcdecode.decode(out)
-    print('beam_results', beam_results.shape)  # BATCHSIZE x N_BEAMS X N_TIMESTEPS
-    print('beam_scores', beam_scores.shape)  # BATCHSIZE x N_BEAMS
-    print('timesteps', timesteps.shape)  # BATCHSIZE x N_BEAMS
-    print('out_lens', out_lens.shape)  # BATCHSIZE x N_BEAMS
+    logging.info('beam_results', beam_results.shape)  # BATCHSIZE x N_BEAMS X N_TIMESTEPS
+    logging.info('beam_scores', beam_scores.shape)  # BATCHSIZE x N_BEAMS
+    logging.info('timesteps', timesteps.shape)  # BATCHSIZE x N_BEAMS
+    logging.info('out_lens', out_lens.shape)  # BATCHSIZE x N_BEAMS
 
     return beam_results, beam_scores, timesteps, out_lens
 
@@ -47,11 +47,10 @@ def decode_output(out, ctcdecode):
 def calculate_distances(beam_results, out_lens, targets):
     import Levenshtein
     n_batches = beam_results.shape[0]
-    logging.info(f'Calcuating distance for {n_batches} entries...')
+    logging.info(f'Calculating distance for {n_batches} entries...')
     distances = []
 
     for i in range(n_batches):
-
         out_converted = convert_to_phonemes(i, beam_results, out_lens, pl.PHONEME_LIST)
         target_converted = target_to_phonemes(targets[i], pl.PHONEME_LIST)
 
