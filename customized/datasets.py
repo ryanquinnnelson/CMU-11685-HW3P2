@@ -2,6 +2,7 @@
 Contains all Dataset objects customized to the data.
 """
 __author__ = 'ryanquinnnelson'
+import logging
 
 import torch
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
@@ -28,14 +29,14 @@ def collate_fn_trainval(batch):
     # pack sequence
     packed_batch_x = pack_padded_sequence(pad_batch_x, lengths_x, enforce_sorted=True)
 
-    print('--collate--')
+    logging.info('--collate--')
     for i, b in enumerate(batch):
-        print(f'x_{i}', b[0].shape, f'y_{i}', b[1].shape)
-    print('lengths_x', lengths_x, 'lengths_y', lengths_y)
-    print('pad_batch_x', pad_batch_x.shape)
-    print('pad_batch_y', pad_batch_y.shape)
-    print('packed_batch_x')
-    print()
+        logging.info(f'x_{i}', b[0].shape, f'y_{i}', b[1].shape)
+    logging.info('lengths_x', lengths_x, 'lengths_y', lengths_y)
+    logging.info('pad_batch_x', pad_batch_x.shape)
+    logging.info('pad_batch_y', pad_batch_y.shape)
+    logging.info('packed_batch_x')
+    logging.info('')
 
     return packed_batch_x, pad_batch_y, lengths_x, lengths_y
 

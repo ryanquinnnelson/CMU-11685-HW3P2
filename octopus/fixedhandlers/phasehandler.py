@@ -104,23 +104,23 @@ class PhaseHandler:
             # validate
             val_loss, val_metric = evaluation.evaluate_model(epoch, self.num_epochs, model)
 
-            # test
-            out = testing.test_model(epoch, self.num_epochs, model)
-            out = self.formatter.format_output(out, ctcdecodehandler.ctcdecoder())
-            self.outputhandler.save(out, epoch)
-
-            # stats
-            end = time.time()
-            self.statshandler.collect_stats(epoch, train_loss, val_loss, val_metric, start, end)
-            self.statshandler.report_stats(self.wandbconnector)
-
-            # scheduler
-            self.schedulerhandler.update_scheduler(scheduler, self.statshandler.stats)
-
-            # save model checkpoint
-            self.checkpointhandler.save(model, optimizer, scheduler, epoch + 1, self.statshandler.stats)
-
-            # check if early stopping criteria is met
-            if self.statshandler.stopping_criteria_is_met(epoch, self.wandbconnector):
-                logging.info('Early stopping criteria is met. Stopping the training process...')
-                break  # stop running epochs
+            # # test
+            # out = testing.test_model(epoch, self.num_epochs, model)
+            # out = self.formatter.format_output(out, ctcdecodehandler.ctcdecoder())
+            # self.outputhandler.save(out, epoch)
+            #
+            # # stats
+            # end = time.time()
+            # self.statshandler.collect_stats(epoch, train_loss, val_loss, val_metric, start, end)
+            # self.statshandler.report_stats(self.wandbconnector)
+            #
+            # # scheduler
+            # self.schedulerhandler.update_scheduler(scheduler, self.statshandler.stats)
+            #
+            # # save model checkpoint
+            # self.checkpointhandler.save(model, optimizer, scheduler, epoch + 1, self.statshandler.stats)
+            #
+            # # check if early stopping criteria is met
+            # if self.statshandler.stopping_criteria_is_met(epoch, self.wandbconnector):
+            #     logging.info('Early stopping criteria is met. Stopping the training process...')
+            #     break  # stop running epochs

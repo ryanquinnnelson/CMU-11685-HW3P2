@@ -5,7 +5,7 @@ __author__ = 'ryanquinnnelson'
 
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence
-
+import logging
 
 # TODO Remove print statements
 class BasicLSTM(nn.Module):
@@ -27,22 +27,22 @@ class BasicLSTM(nn.Module):
         self.linear = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        print('--forward--')
+        logging.info('--forward--')
         unpacked_x, lengths_x = pad_packed_sequence(x, batch_first=False)
-        print('x_t', unpacked_x.shape, 'lengths_x', lengths_x)
+        logging.info('x_t', unpacked_x.shape, 'lengths_x', lengths_x)
 
         # initialize hidden layer and cell state layer?
         # what was lengths used for here? was it returned in the dataloader too as a third arg?
 
         out, (h_t, c_t) = self.rnn(x)
-        print('h_t', h_t.shape)
-        print('c_t', c_t.shape)
+        logging.info('h_t', h_t.shape)
+        logging.info('c_t', c_t.shape)
 
         # unpack sequence for use in linear layer
         unpacked_out, lengths_out = pad_packed_sequence(out, batch_first=False)
-        print('out_t', unpacked_out.shape, 'lengths_out', lengths_out)
+        logging.info('out_t', unpacked_out.shape, 'lengths_out', lengths_out)
 
         out = self.linear(unpacked_out)
-        print('linear', out.shape)
-        print()
+        logging.info('linear', out.shape)
+        logging.info('')
         return out

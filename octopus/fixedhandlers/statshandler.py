@@ -54,7 +54,7 @@ class StatsHandler:
         best_name, best_val = wandbconnector.get_best_value(self.comparison_metric, epoch, self.best_is_max)
         model_name = wandbconnector.run_name
         model_val = self.stats[self.comparison_metric][-1]
-        print(f'best:\t{best_name}\t{best_val}\nmodel:\t{model_name}\t{model_val}')
+        logging.info(f'best:\t{best_name}\t{best_val}\nmodel:\t{model_name}\t{model_val}')
 
         if best_val is not None and self.best_is_max:
             # compare values for this epoch

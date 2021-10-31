@@ -9,6 +9,9 @@ from customized.helper import decode_output, \
 
 import logging
 import torch
+import warnings
+
+warnings.filterwarnings('ignore')
 
 
 class Training:
@@ -63,12 +66,12 @@ class Training:
             # calculate loss
             loss = self.criterion_func(out, targets, input_lengths, target_lengths)
             train_loss += loss.item()
-            logging.info('--compute loss--')
-            logging.info('targets', targets.shape)
-            logging.info('input_lengths', input_lengths, input_lengths.shape)
-            logging.info('target_lengths', target_lengths, target_lengths.shape)
-            logging.info('')
-            logging.info('loss', loss.item())
+            # logging.info('--compute loss--')
+            # logging.info('targets', targets.shape)
+            # logging.info('input_lengths', input_lengths, input_lengths.shape)
+            # logging.info('target_lengths', target_lengths, target_lengths.shape)
+            # logging.info('')
+            # logging.info('loss', loss.item())
 
             # compute backward pass
             loss.backward()
@@ -142,23 +145,25 @@ class Evaluation:
                 # calculate validation loss
                 loss = self.criterion_func(out, targets, input_lengths, target_lengths)
                 val_loss += loss.item()
-                logging.info('--compute loss--')
-                logging.info('targets', targets.shape)
-                logging.info('input_lengths', input_lengths, input_lengths.shape)
-                logging.info('target_lengths', target_lengths, target_lengths.shape)
-                logging.info('loss', loss.item())
-                logging.info('')
+                # logging.info('--compute loss--')
+                # logging.info('targets', targets.shape)
+                # logging.info('input_lengths', input_lengths, input_lengths.shape)
+                # logging.info('target_lengths', target_lengths, target_lengths.shape)
+                # logging.info('loss', loss.item())
+                # logging.info('')
 
                 # calculate distance between actual and desired output
                 out = out.cpu().detach()  # extract from gpu
                 logging.info('out detached', out.shape)
-                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
-                distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
-                running_distance += distance
+                # beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
+                # distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
+                # running_distance += distance
 
                 # delete mini-batch from device
                 del inputs
                 del targets
+                del target_lengths
+                del input_lengths
 
             # calculate evaluation metrics
             val_loss /= len(self.val_loader)  # average per mini-batch
