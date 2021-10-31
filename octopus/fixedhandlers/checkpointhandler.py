@@ -27,7 +27,7 @@ class CheckpointHandler:
             run_name (str): Name of the current run
             load_from_checkpoint (str): fully-qualified filename of checkpoint file to load
         """
-        logging.info('Initializing checkpoint handling...')
+        logging.info('Initializing checkpoint handler...')
         self.checkpoint_dir = checkpoint_dir
         self.delete_existing_checkpoints = delete_existing_checkpoints
         self.run_name = run_name

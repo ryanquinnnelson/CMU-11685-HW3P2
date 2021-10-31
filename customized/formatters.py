@@ -9,7 +9,7 @@ import json
 import logging
 import os
 from customized.helper import convert_to_phonemes, target_to_phonemes, convert_to_string, decode_output
-import phoneme_list as pl
+import customized.phoneme_list as pl
 
 
 class OutputFormatter:
@@ -17,16 +17,15 @@ class OutputFormatter:
     Defines an object to manage formatting of test output.
     """
 
-    def __init__(self, data_dir, ctcdecodehandler):
+    def __init__(self):
         """
         Initialize OutputFormatter.
         Args:
             data_dir (str): fully-qualified path to data directory
         """
-        self.data_dir = data_dir
-        self.ctcdecode = ctcdecodehandler.get_ctcdecoder()
+        logging.info('Initializing output formatter...')
 
-    def format_output(self, out):
+    def format_output(self, out, ctcdecode):
         """
         Format given model output as desired.
 
@@ -42,7 +41,7 @@ class OutputFormatter:
         logging.info('out shape', out.shape)
 
         # decode output
-        beam_results, beam_scores, timesteps, out_lens = decode_output(out, self.ctcdecode)
+        beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
 
         # convert to strings using phoneme map
         n_batches = beam_results.shape[0]

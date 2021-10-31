@@ -25,7 +25,7 @@ class DataLoaderHandler:
             num_workers (int): number of workers for use in DataLoader when a GPU is available
             pin_memory (Boolean): True if DataLoader should use pin memory when a GPU is available
         """
-        logging.info('Initializing dataloader handling...')
+        logging.info('Initializing dataloader handler...')
         # parameters
         self.batch_size = batch_size
         self.num_workers = num_workers

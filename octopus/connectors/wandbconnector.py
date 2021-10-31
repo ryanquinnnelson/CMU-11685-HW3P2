@@ -28,7 +28,7 @@ class WandbConnector:
             tags (List): list of strings representing tags for wandb
             config (Dict): dictionary of all hyperparameter configurations set for this run
         """
-
+        logging.info('Initializing wandb connector...')
         self.wandb_dir = wandb_dir
         self.entity = entity
         self.run_name = run_name
@@ -51,7 +51,6 @@ class WandbConnector:
         # ensure wandb_dir exists
         utilities.create_directory(self.wandb_dir)
 
-        _install()
         _login()
         self.wandb_config = self._initialize()
 
@@ -215,22 +214,6 @@ def _calculate_best_value(metrics_df, metric, epoch, best_is_max):
     best_val = bests[bests['epoch'] == epoch][metric].item()
     best_name = metrics_df[metrics_df[metric] == best_val]['name'].iloc[0]
     return best_name, best_val
-
-
-def _install():
-    """
-    Install wandb version 0.10.8 using pip.
-    Returns: None
-
-    """
-
-    logging.info('Installing wandb...')
-
-    process = subprocess.Popen(['pip', 'install', '--upgrade', 'wandb==0.10.8'],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
-    logging.info(stdout.decode("utf-8"))
 
 
 def _login():

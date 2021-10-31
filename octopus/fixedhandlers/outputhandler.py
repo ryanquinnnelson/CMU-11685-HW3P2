@@ -20,7 +20,7 @@ class OutputHandler:
             run_name (str): Name of the run
             output_dir (str): fully qualified path to the directory where output should be written
         """
-        logging.info('Initializing output handling...')
+        logging.info('Initializing output handler...')
         self.run_name = run_name
         self.output_dir = output_dir
 

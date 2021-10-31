@@ -28,7 +28,7 @@ class KaggleConnector:
             competition (str): name of the kaggle competition from which data should be downloaded
             delete_zipfiles (Boolean): if True, removes any zipfiles downloaded by kaggle after unzipping them
         """
-
+        logging.info('Initializing kaggle connector...')
         self.kaggle_dir = kaggle_dir
         self.content_dir = content_dir
         self.token_file = token_file
@@ -46,9 +46,6 @@ class KaggleConnector:
         """
 
         logging.info('Setting up kaggle connection...')
-
-        # download and install library
-        _install()
 
         # create directories
         _mkdirs(self.kaggle_dir, self.content_dir)
@@ -196,21 +193,6 @@ def _secure_kaggle_token(token_dest):
 
     logging.info('Securing kaggle token...')
     process = subprocess.Popen(['chmod', '600', token_dest],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
-    logging.info(stdout.decode("utf-8"))
-
-
-def _install():
-    """
-    Installs kaggle using pip.
-    Returns: None
-
-    """
-
-    logging.info('Installing kaggle...')
-    process = subprocess.Popen(['pip', 'install', 'kaggle'],
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()

@@ -23,7 +23,7 @@ class StatsHandler:
             comparison_best_is_max (Boolean): True if higher values of the comparison metric mean better performance.
             comparison_patience (int): Number of epochs current model can perform worse than a previous run before early stopping.
         """
-        logging.info('Initializing stats handling...')
+        logging.info('Initializing stats handler...')
         self.stats = {'epoch': [],
                       'runtime': [],
                       'train_loss': [],

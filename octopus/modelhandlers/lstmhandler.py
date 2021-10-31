@@ -3,6 +3,8 @@ Handler for LSTM models.
 """
 __author__ = 'ryanquinnnelson'
 
+import logging
+
 from octopus.models import LSTM
 
 
@@ -16,6 +18,7 @@ class LstmHandler:
         self.output_size = output_size
         self.bidirectional = bidirectional
         self.dropout = dropout
+        logging.info('Initializing LSTM handler...')
 
     def get_model(self):
         model = None

@@ -7,7 +7,6 @@ import logging
 import os
 import sys
 import subprocess
-import multiprocessing
 
 # execute before loading torch
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"  # better error tracking from gpu
@@ -26,7 +25,7 @@ from octopus.fixedhandlers.phasehandler import PhaseHandler
 from octopus.fixedhandlers.dataloaderhandler import DataLoaderHandler
 from octopus.fixedhandlers.outputhandler import OutputHandler
 from octopus.fixedhandlers.piphandler import PipHandler
-from octopus.datasethandlers.numberdatasethandler import NumbersDatasetHandler
+from octopus.datasethandlers.numericaldatasethandler import NumericalDatasetHandler
 from octopus.modelhandlers.lstmhandler import LstmHandler
 from octopus.phases.training import Training
 from octopus.phases.testing import Testing
@@ -37,7 +36,7 @@ from customized.evaluation import Evaluation
 from customized.datasets import TrainValDataset, TestDataset
 import customized.datasets as customized_datasets
 from customized.ctcdecodehandler import CTCDecodeHandler
-import customized.phoneme_list as phoneme_list
+import customized.phoneme_list as pl
 
 
 class Octopus:
@@ -65,30 +64,20 @@ class Octopus:
         # connectors
         self.kaggleconnector, self.wandbconnector = initialize_connectors(config)
 
-        # ctc decoder
-        n_cpus = multiprocessing.cpu_count()
-        logging.info(f'Number of cpus:{n_cpus}.')
-        self.ctcdecodehandler = CTCDecodeHandler(phoneme_list.PHONEME_LIST,
-                                                 config['CTCDecode']['model_path'],
-                                                 config['CTCDecode'].getint('alpha'),
-                                                 config['CTCDecode'].getint('beta'),
-                                                 config['CTCDecode'].getint('cutoff_top_n'),
-                                                 config['CTCDecode'].getfloat('cutoff_prob'),
-                                                 config['CTCDecode'].getint('beam_width'),
-                                                 n_cpus,
-                                                 config['CTCDecode'].getint('blank_id'),
-                                                 config['CTCDecode'].getboolean('log_probs_input')
-                                                 )
-
         # fixed handlers
         self.piphandler, self.checkpointhandler, self.criterionhandler, self.dataloaderhandler, self.devicehandler, \
         self.optimizerhandler, self.outputhandler, self.schedulerhandler, self.statshandler, \
-        self.phasehandler = initialize_fixed_handlers(config, self.wandbconnector, self.ctcdecodehandler)
+        self.phasehandler = initialize_fixed_handlers(config, self.wandbconnector)
 
         # variable handlers
-        self.inputhandler, self.modelhandler = initialize_variable_handlers(config)
+        self.inputhandler, self.modelhandler, self.ctcdecodehandler = initialize_variable_handlers(config)
 
         logging.info('octopus initialization is complete.')
+
+    def install_packages(self):
+        logging.info('octopus is installing necessary packages...')
+        self.piphandler.install_packages()
+        logging.info('Package installation is complete.')
 
     def setup_environment(self):
         """
@@ -120,9 +109,6 @@ class Octopus:
         # dataloaders
         self.dataloaderhandler.setup(self.devicehandler.device, self.inputhandler)
 
-        # pip modules
-        self.piphandler.install_modules()
-
         logging.info('octopus has finished setting up the environment.')
 
     def download_data(self):
@@ -139,6 +125,32 @@ class Octopus:
             logging.info('octopus is not downloading data.')
             logging.info(f'octopus expects data to be available in {self.inputhandler.data_dir}.')
 
+    def initialize_pipeline_components(self):
+
+        logging.info('octopus is initializing pipeline components...')
+
+        # initialize model
+        self.model = self.modelhandler.get_model()
+        self.model = self.devicehandler.move_model_to_device(
+            self.model)  # move model before initializing optimizer - see Note 1
+        self.wandbconnector.watch(self.model)
+
+        # initialize model components
+        self.loss_func = self.criterionhandler.get_loss_function()
+        self.optimizer = self.optimizerhandler.get_optimizer(self.model)
+        scheduler = self.schedulerhandler.get_scheduler(self.optimizer)
+        # ?? should I move criterion to device too?
+
+        # load data
+        self.train_loader, self.val_loader, self.test_loader = self.dataloaderhandler.load(self.inputhandler)
+
+        # load phases
+        self.training = Training(self.train_loader, self.loss_func, self.devicehandler)
+        self.evaluation = Evaluation(self.val_loader, self.loss_func, self.devicehandler, self.ctcdecodehandler)
+        self.testing = Testing(self.test_loader, self.devicehandler)
+
+        logging.info('Pipeline components are initialized.')
+
     def run_pipeline(self):
         """
         Runs the deep learning pipeline. Builds model, moves model to device (if GPU), setups up wandb to watch the
@@ -154,27 +166,10 @@ class Octopus:
         """
         logging.info('octopus is running the pipeline...')
 
-        # initialize model
-        model = self.modelhandler.get_model()
-        model = self.devicehandler.move_model_to_device(model)  # move model before initializing optimizer - see Note 1
-        self.wandbconnector.watch(model)
-
-        # initialize model components
-        loss_func = self.criterionhandler.get_loss_function()
-        optimizer = self.optimizerhandler.get_optimizer(model)
-        scheduler = self.schedulerhandler.get_scheduler(optimizer)
-        # ?? should I move criterion to device too?
-
-        # load data
-        train_loader, val_loader, test_loader = self.dataloaderhandler.load(self.inputhandler)
-
-        # load phases
-        training = Training(train_loader, loss_func, self.devicehandler)
-        evaluation = Evaluation(val_loader, loss_func, self.devicehandler, self.ctcdecodehandler)
-        testing = Testing(test_loader, self.devicehandler)
-
         # run epochs
-        self.phasehandler.process_epochs(model, optimizer, scheduler, training, evaluation, testing)
+        self.phasehandler.process_epochs(self.model, self.optimizer, self.scheduler, self.training, self.evaluation,
+                                         self.testing,
+                                         self.ctcdecodehandler)
 
         logging.info('octopus has finished running the pipeline.')
 
@@ -184,7 +179,6 @@ class Octopus:
         Returns:None
 
         """
-
         self.wandbconnector.run.finish()  # finish logging for this run
         logging.info('octopus shutdown complete.')
 
@@ -292,7 +286,7 @@ def initialize_connectors(config):
     return kaggleconnector, wandbconnector
 
 
-def initialize_fixed_handlers(config, wandbconnector, ctcdecodehandler):
+def initialize_fixed_handlers(config, wandbconnector):
     """
     Initializes all object handlers that remain the same regardless of changes to data.
     Args:
@@ -305,11 +299,11 @@ def initialize_fixed_handlers(config, wandbconnector, ctcdecodehandler):
     """
 
     # pip
-    if config.has_option('pip', 'modules'):
-        modules_list = _to_string_list(config['pip']['modules'])
+    if config.has_option('pip', 'packages'):
+        packages_list = _to_string_list(config['pip']['packages'])
     else:
-        modules_list = None
-    piphandler = PipHandler(modules_list)
+        packages_list = None
+    piphandler = PipHandler(packages_list)
 
     # checkpoints
     checkpointhandler = CheckpointHandler(config['checkpoint']['checkpoint_dir'],
@@ -360,7 +354,7 @@ def initialize_fixed_handlers(config, wandbconnector, ctcdecodehandler):
                                 checkpointhandler,
                                 schedulerhandler,
                                 wandbconnector,
-                                OutputFormatter(config['data']['data_dir'], ctcdecodehandler),
+                                OutputFormatter(),
                                 config['checkpoint'].getboolean('load_from_checkpoint'),
                                 checkpoint_file)
 
@@ -380,24 +374,24 @@ def initialize_variable_handlers(config):
 
     """
     # input
-    if config['data']['data_type'] == 'numbers':
-        inputhandler = NumbersDatasetHandler(config['data']['data_dir'],
-                                             config['data']['train_data'],
-                                             config['data']['train_labels'],
-                                             config['data']['val_data'],
-                                             config['data']['val_labels'],
-                                             config['data']['test_data'],
-                                             TrainValDataset,
-                                             TrainValDataset,
-                                             TestDataset,
-                                             customized_datasets.trainval_collate_fn,
-                                             customized_datasets.trainval_collate_fn,
-                                             customized_datasets.test_collate_fn)
+    if config['data']['data_type'] == 'numerical':
+        inputhandler = NumericalDatasetHandler(config['data']['data_dir'],
+                                               config['data']['train_data'],
+                                               config['data']['train_labels'],
+                                               config['data']['val_data'],
+                                               config['data']['val_labels'],
+                                               config['data']['test_data'],
+                                               TrainValDataset,
+                                               TrainValDataset,
+                                               TestDataset,
+                                               customized_datasets.trainval_collate_fn,
+                                               customized_datasets.trainval_collate_fn,
+                                               customized_datasets.test_collate_fn)
     else:
         inputhandler = None
 
     # model
-    if config['model']['model_type'] == 'LSTM':
+    if 'LSTM' in config['model']['model_type']:
         modelhandler = LstmHandler(config['model']['model_type'],
                                    config['model'].getint('input_size'),
                                    config['model'].getint('hidden_size'),
@@ -409,4 +403,16 @@ def initialize_variable_handlers(config):
     else:
         modelhandler = None
 
-    return inputhandler, modelhandler
+    # ctc decoder
+    ctcdecodehandler = CTCDecodeHandler(pl.PHONEME_LIST,
+                                        config['CTCDecode']['model_path'],
+                                        config['CTCDecode'].getint('alpha'),
+                                        config['CTCDecode'].getint('beta'),
+                                        config['CTCDecode'].getint('cutoff_top_n'),
+                                        config['CTCDecode'].getfloat('cutoff_prob'),
+                                        config['CTCDecode'].getint('beam_width'),
+                                        config['CTCDecode'].getint('blank_id'),
+                                        config['CTCDecode'].getboolean('log_probs_input')
+                                        )
+
+    return inputhandler, modelhandler, ctcdecodehandler

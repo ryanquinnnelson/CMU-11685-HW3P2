@@ -20,7 +20,7 @@ delete_zipfiles_after_unzipping = True
 
 
 [pip]
-modules=ctcdecode,Levenshtein
+packages=--upgrade wandb==0.10.8,kaggle,Levenshtein,ctcdecode
 
 
 
@@ -44,13 +44,13 @@ val_metric_name=avg_distance
 
 
 [data]
-data_type = number
-data_dir = /home/ubuntu/content/competitions/11785-fall2021-hw3p2
-train_data=/home/ubuntu/content/competitions/11785-fall2021-hw3p2/train.npy
-train_labels=/home/ubuntu/content/competitions/11785-fall2021-hw3p2/train_labels.npy
-val_data=/home/ubuntu/content/competitions/11785-fall2021-hw3p2/dev.npy
-val_labels=/home/ubuntu/content/competitions/11785-fall2021-hw3p2/dev_labels.npy
-test_data=/home/ubuntu/content/competitions/11785-fall2021-hw3p2/test.npy
+data_type = numerical
+data_dir = /home/ubuntu/content/competitions/11785-fall2021-hw3p2/HW3P2_Data
+train_data=/home/ubuntu/content/competitions/11785-fall2021-hw3p2/HW3P2_Data/train.npy
+train_labels=/home/ubuntu/content/competitions/11785-fall2021-hw3p2/HW3P2_Data/train_labels.npy
+val_data=/home/ubuntu/content/competitions/11785-fall2021-hw3p2/HW3P2_Data/dev.npy
+val_labels=/home/ubuntu/content/competitions/11785-fall2021-hw3p2/HW3P2_Data/dev_labels.npy
+test_data=/home/ubuntu/content/competitions/11785-fall2021-hw3p2/HW3P2_Data/test.npy
 
 
 
@@ -79,7 +79,7 @@ batch_size=2
 
 
 [model]
-model_type=LTSM
+model_type=BasicLSTM
 input_size=40
 hidden_size=128
 num_layers=1

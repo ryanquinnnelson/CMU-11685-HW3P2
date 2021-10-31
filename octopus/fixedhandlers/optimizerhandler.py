@@ -20,7 +20,7 @@ class OptimizerHandler:
             optimizer_type (str): represents the optimizer to construct
             optimizer_kwargs (Dict): dictionary of arguments for use in optimizer initialization
         """
-        logging.info('Initializing optimizer handling...')
+        logging.info('Initializing optimizer handler...')
         self.optimizer_type = optimizer_type
         self.optimizer_kwargs = optimizer_kwargs
 

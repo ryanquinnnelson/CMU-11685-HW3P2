@@ -23,10 +23,12 @@ def main():
 
         # run octopus
         octopus = Octopus(config, f)
-        octopus.setup_environment()
-        octopus.download_data()
-        octopus.run_pipeline()
-        octopus.cleanup()
+        # octopus.install_packages()
+        # octopus.setup_environment()
+        # octopus.download_data()
+        # octopus.initialize_pipeline_components()
+        # octopus.run_pipeline()
+        # octopus.cleanup()
 
 
 if __name__ == "__main__":

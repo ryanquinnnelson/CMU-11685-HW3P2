@@ -22,7 +22,7 @@ class SchedulerHandler:
             scheduler_kwargs (Dict): Dictionary of arguments needed to initialize the scheduler.
             scheduler_plateau_metric (str): Name of the metric used when updating scheduler, if any.
         """
-        logging.info('Initializing scheduler handling...')
+        logging.info('Initializing scheduler handler...')
         self.scheduler_type = scheduler_type
         self.scheduler_kwargs = scheduler_kwargs
         self.scheduler_plateau_metric = scheduler_plateau_metric

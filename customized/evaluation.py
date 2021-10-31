@@ -8,7 +8,7 @@ import logging
 import torch
 import numpy as np
 
-import phoneme_list as pl
+import customized.phoneme_list as pl
 from customized.helper import convert_to_phonemes, target_to_phonemes, convert_to_string, decode_output
 
 
@@ -55,7 +55,7 @@ class Evaluation:
         self.val_loader = val_loader
         self.criterion_func = criterion_func
         self.devicehandler = devicehandler
-        self.ctcdecode = ctcdecodehandler.get_ctcdecoder()
+        self.ctcdecodehandler = ctcdecodehandler
 
     def evaluate_model(self, epoch, num_epochs, model):
         """
@@ -98,7 +98,7 @@ class Evaluation:
 
                 # calculate distance between actual and desired output
                 out = out.cpu().detach()  # extract from gpu
-                beam_results, beam_scores, timesteps, out_lens = decode_output(out, self.ctcdecode)
+                beam_results, beam_scores, timesteps, out_lens = decode_output(out, self.ctcdecodehandler.ctcdecoder())
                 distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
                 running_distance += distance
 

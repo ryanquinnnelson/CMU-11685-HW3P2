@@ -8,19 +8,20 @@ import subprocess
 
 
 class PipHandler:
-    def __init__(self, modules):
-        self.modules = modules if modules is not None else []
+    def __init__(self, packages_list):
+        logging.info('Initializing pip installations handler...')
+        self.packages_list = packages_list if packages_list is not None else []
 
-    def install_modules(self):
-        for m in self.modules:
+    def install_packages(self):
+        for m in self.packages_list:
 
             if m == 'ctcdecode':
-                install_ctcdecode()
+                _install_ctcdecode()
             else:
-                install_module(m)
+                _install_package(m)
 
 
-def install_ctcdecode():
+def _install_ctcdecode():
     logging.info(f'Downloading ctcdecode...')
     process = subprocess.Popen(['cd'],
                                stdout=subprocess.PIPE,
@@ -48,9 +49,12 @@ def install_ctcdecode():
     logging.info(stdout.decode("utf-8"))
 
 
-def install_module(module):
-    logging.info(f'Installing {module}...')
-    process = subprocess.Popen(['pip', 'install', module],
+def _install_package(package):
+    # split package into individual words if necessary
+    words = package.strip().split()
+    commands = ['pip', 'install'] + words
+    logging.info(''.join([c + ' ' for c in commands]))
+    process = subprocess.Popen(commands,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()

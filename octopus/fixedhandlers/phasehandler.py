@@ -30,7 +30,7 @@ class PhaseHandler:
             checkpoint
             checkpoint_file (str): Fully-qualified filename of checkpoint file to be loaded, if any
         """
-        logging.info('Initializing phase handling...')
+        logging.info('Initializing phase handler...')
         self.load_from_checkpoint = load_from_checkpoint
         self.checkpoint_file = checkpoint_file
         self.first_epoch = 1
@@ -69,7 +69,7 @@ class PhaseHandler:
         # set which epoch to start from
         self.first_epoch = checkpoint['next_epoch']
 
-    def process_epochs(self, model, optimizer, scheduler, training, evaluation, testing):
+    def process_epochs(self, model, optimizer, scheduler, training, evaluation, testing, ctcdecodehandler):
         """
         Run training phases for all epochs. Load model from checkpoint first if necessary and submit all previous
         stats to wandb.
@@ -106,7 +106,7 @@ class PhaseHandler:
 
             # test
             out = testing.test_model(epoch, self.num_epochs, model)
-            out = self.formatter.format_output(out)
+            out = self.formatter.format_output(out, ctcdecodehandler.ctcdecoder())
             self.outputhandler.save(out, epoch)
 
             # stats

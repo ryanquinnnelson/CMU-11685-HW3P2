@@ -6,7 +6,6 @@ __author__ = 'ryanquinnnelson'
 import logging
 
 import torch.nn as nn
-from octopus.criterion.centerloss import CenterLoss
 
 
 class CriterionHandler:
@@ -21,7 +20,7 @@ class CriterionHandler:
         Args:
             criterion_type (str): represents loss function to use
         """
-        logging.info('Initializing criterion handling...')
+        logging.info('Initializing criterion handler...')
         self.criterion_type = criterion_type
 
     def get_loss_function(self):

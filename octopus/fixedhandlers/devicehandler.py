@@ -17,7 +17,7 @@ class DeviceHandler:
         """
         Initialize DeviceHandler.
         """
-        logging.info('Initializing device handling...')
+        logging.info('Initializing device handler...')
         self.device = None
 
     def setup(self):
