@@ -52,7 +52,8 @@ def _install_ctcdecode():
 
         logging.info(f'Installing ctcdecode...')
         os.chdir(os.path.join(home_dir, 'ctcdecode'))
-        logging.info(['pip', 'install', os.path.join(home_dir, 'ctcdecode')])
+        commands = ['pip', 'install', os.path.join(home_dir, 'ctcdecode')]
+        logging.info(''.join([c + ' ' for c in commands]))
         process = subprocess.Popen(['pip', 'install', os.path.join(home_dir, 'ctcdecode')],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)

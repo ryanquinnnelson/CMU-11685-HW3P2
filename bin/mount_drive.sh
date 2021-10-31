@@ -5,6 +5,7 @@
 # Follows the steps outlined on StackOverflow:
 # https://stackoverflow.com/questions/45167717/mounting-a-nvme-disk-on-aws-ec2/64709212#64709212
 
+# drive is likely  /dev/nvme1n1
 if [ -z "$1" ]; then
     echo "Drive must be supplied as the first argument: mount_drive.sh <drive>"
     exit 1
