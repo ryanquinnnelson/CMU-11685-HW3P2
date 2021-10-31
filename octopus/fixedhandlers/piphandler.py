@@ -3,6 +3,7 @@ All things related to installing modules via pip.
 """
 __author__ = 'ryanquinnnelson'
 
+import os
 import logging
 import subprocess
 
@@ -22,31 +23,42 @@ class PipHandler:
 
 
 def _install_ctcdecode():
-    logging.info(f'Downloading ctcdecode...')
-    process = subprocess.Popen(['cd'],
+    # check if it is already installed
+    process = subprocess.Popen(['pip', 'show', 'ctcdecode'],
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
-    logging.info(stdout.decode("utf-8"))
+    rc = process.returncode
+    if rc == 0:
+        logging.info('ctcdecode is already installed.')
+    else:
 
-    process = subprocess.Popen(['git', 'clone', '--recursive', 'https://github.com/parlance/ctcdecode.git'],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
-    logging.info(stdout.decode("utf-8"))
+        logging.info(f'Downloading ctcdecode...')
+        home_dir = os.path.expanduser('~')
+        os.chdir(home_dir)
 
-    logging.info(f'Installing ctcdecode...')
-    process = subprocess.Popen(['cd', 'ctcdecode'],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
-    logging.info(stdout.decode("utf-8"))
+        process = subprocess.Popen(['git', 'clone', '--recursive', 'https://github.com/parlance/ctcdecode.git'],
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        logging.info(stdout.decode("utf-8"))
+        logging.info(stderr.decode("utf-8"))
 
-    process = subprocess.Popen(['pip', 'install', '.'],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
-    logging.info(stdout.decode("utf-8"))
+        # workaround for ctcdecode installation issue
+        # Error: mkl-service + Intel(R) MKL: MKL_THREADING_LAYER=INTEL is incompatible with libgomp-7c85b1e2.so.1 library.
+        # Try to import numpy first or set the threading layer accordingly. Set MKL_SERVICE_FORCE_INTEL to force it.
+        # https://github.com/pytorch/pytorch/issues/37377
+        os.environ['MKL_THREADING_LAYER'] = 'GNU'
+
+        logging.info(f'Installing ctcdecode...')
+        os.chdir(os.path.join(home_dir, 'ctcdecode'))
+        logging.info(['pip', 'install', os.path.join(home_dir, 'ctcdecode')])
+        process = subprocess.Popen(['pip', 'install', os.path.join(home_dir, 'ctcdecode')],
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        logging.info(stdout.decode("utf-8"))
+        logging.info(stderr.decode("utf-8"))
 
 
 def _install_package(package):
