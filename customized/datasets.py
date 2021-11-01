@@ -12,19 +12,22 @@ from torch.utils.data import Dataset
 
 def collate_fn_trainval(batch):
     # sort batch by decreasing sequence length
+    # batch: x=(N_TIMESTEPS x FEATURES), y=(UTTERANCE_LABEL_LENGTH,)
     batch = sorted(batch, key=lambda x: len(x[0]), reverse=True)
 
     # split batch into features and target
-    batch_x = [x for x, y in batch]
+    batch_x = [x for x, y in batch]  # List of x Tensors, length=BATCHSIZE
     lengths_x = torch.LongTensor([len(x) for x, y in batch])
-    batch_y = [y for x, y in batch]
+    batch_y = [y for x, y in batch]  # List of y Tensors, length=BATCHSIZE
     lengths_y = torch.LongTensor([len(y) for x, y in batch])
 
     # Pad sequences to have the same number of rows per utterance
+    # pad_batch_x: (MAX_N_TIMESTEPS x BATCHSIZE x FEATURES)
     pad_batch_x = pad_sequence(batch_x, batch_first=False)  # CTCLoss expects batch second for input
 
     # ?? do we pad and pack targets
     # Pad targets to have the same number of elements per utterance
+    # pad_batch_y: (BATCHSIZE x MAX_UTTERANCE_LABEL_LENGTH)
     pad_batch_y = pad_sequence(batch_y, batch_first=True)  # CTCLoss expects batch first for targets
 
     # pack sequence

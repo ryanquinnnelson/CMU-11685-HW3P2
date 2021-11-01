@@ -60,16 +60,19 @@ class Training:
             input_lengths, target_lengths = self.devicehandler.move_data_to_device(model, input_lengths, target_lengths)
 
             # compute forward pass
+            # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
+            # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
             out = model.forward(inputs)
 
-            # calculate loss
+            # calculate validation loss
+            # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
             loss = self.criterion_func(out, targets, input_lengths, target_lengths)
             train_loss += loss.item()
             logging.info('--compute loss--')
-            logging.info(f'targets:{ targets.shape}')
-            logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}' )
+            logging.info(f'targets:{targets.shape}')
+            logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}')
             logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
-            logging.info(f'loss:{ loss.item()}')
+            logging.info(f'loss:{loss.item()}')
             logging.info('')
 
             # compute backward pass
@@ -138,10 +141,13 @@ class Evaluation:
                 input_lengths, target_lengths = self.devicehandler.move_data_to_device(model, input_lengths,
                                                                                        target_lengths)
 
-                # forward pass
+                # compute forward pass
+                # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
+                # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
                 out = model.forward(inputs)
 
                 # calculate validation loss
+                # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
                 loss = self.criterion_func(out, targets, input_lengths, target_lengths)
                 val_loss += loss.item()
                 logging.info('--compute loss--')
@@ -156,7 +162,7 @@ class Evaluation:
                 logging.info(f'out detached:{out.shape}')
                 beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
                 distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
-                running_distance += distance
+                running_distance += distance  # ?? something more for running total
 
                 # delete mini-batch from device
                 del inputs
@@ -213,13 +219,15 @@ class Testing:
                 # prep
                 inputs, targets = self.devicehandler.move_data_to_device(model, inputs, None)
 
-                # forward pass
+                # compute forward pass
+                # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
+                # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
                 out = model.forward(inputs)
 
                 # capture output for mini-batch
-                out = out.cpu().detach().numpy()  # extract from gpu if necessary
+                out = out.cpu().detach()  # extract from gpu if necessary
                 output.append(out)
 
-        combined = np.concatenate(output, axis=0)
+        out_all_batches = torch.cat(output, dim=1)  # dimension 1 is batch
 
-        return combined
+        return out_all_batches
