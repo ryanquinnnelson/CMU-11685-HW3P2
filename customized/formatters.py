@@ -46,16 +46,17 @@ class OutputFormatter:
 
         for i in range(n_batches):
             out_converted = convert_to_phonemes(i, beam_results, out_lens, pl.PHONEME_MAP)
-            logging.info(f'out_converted:{out_converted}')
+            logging.info(f'out_converted[{i}]:{out_converted}')
             converted.append(out_converted)
 
         # convert string array to dataframe
         df = pd.DataFrame(converted).reset_index(drop=False)
-        logging.info(df.head())
+        logging.info('dataframe')
+        logging.info(f'\n{df.head()}')
         logging.info(df.columns)
 
         # change column names
         df = df.rename(columns={0: "label", 'index': 'id'})
-        logging.info(df.head())
+        logging.info(f'\n{df.head()}')
 
         return df
