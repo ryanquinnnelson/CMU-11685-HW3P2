@@ -31,6 +31,9 @@ def convert_to_string(converted_list):
 
 def decode_output(out, ctcdecode):
     # decode requires BATCHSIZE x N_TIMESTEPS x N_LABELS
+    logging.info(type(out))
+    out = torch.Tensor(out)
+    logging.info(type(out))
     out = torch.transpose(out, 0, 1)
     logging.info(f'out transposed:{out.shape}')
 
