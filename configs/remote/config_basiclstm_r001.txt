@@ -74,7 +74,7 @@ log_probs_input=True
 [dataloader]
 num_workers=8
 pin_memory=True
-batch_size=2
+batch_size=256
 
 
 
@@ -99,7 +99,7 @@ checkpoint_file = None
 
 
 [hyperparameters]
-num_epochs = 1
+num_epochs = 30
 criterion_type=CTCLoss
 optimizer_type=Adam
 optimizer_kwargs=lr=0.002,weight_decay=0.000005
