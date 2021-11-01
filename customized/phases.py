@@ -68,12 +68,12 @@ class Training:
             # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
             loss = self.criterion_func(out, targets, input_lengths, target_lengths)
             train_loss += loss.item()
-            logging.info('--compute loss--')
-            logging.info(f'targets:{targets.shape}')
-            logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}')
-            logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
-            logging.info(f'loss:{loss.item()}')
-            logging.info('')
+            # logging.info('--compute loss--')
+            # logging.info(f'targets:{targets.shape}')
+            # logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}')
+            # logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
+            # logging.info(f'loss:{loss.item()}')
+            # logging.info('')
 
             # compute backward pass
             loss.backward()
@@ -150,16 +150,16 @@ class Evaluation:
                 # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
                 loss = self.criterion_func(out, targets, input_lengths, target_lengths)
                 val_loss += loss.item()
-                logging.info('--compute loss--')
-                logging.info(f'targets:{targets.shape}')
-                logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}')
-                logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
-                logging.info(f'loss:{loss.item()}')
-                logging.info('')
+                # logging.info('--compute loss--')
+                # logging.info(f'targets:{targets.shape}')
+                # logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}')
+                # logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
+                # logging.info(f'loss:{loss.item()}')
+                # logging.info('')
 
                 # calculate distance between actual and desired output
                 out = out.cpu().detach()  # extract from gpu
-                logging.info(f'out detached:{out.shape}')
+                # logging.info(f'out detached:{out.shape}')
                 beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
                 distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
                 running_distance += distance  # ?? something more for running total

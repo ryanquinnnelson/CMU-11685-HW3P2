@@ -47,11 +47,11 @@ class BasicLSTM(nn.Module):
         # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
         out = self.linear(unpacked_out)
 
-        logging.info('--forward--')
-        logging.info(f'x_t:{unpacked_x.shape},lengths_x:{lengths_x}')
-        logging.info(f'h_t:{h_t.shape}', )
-        logging.info(f'c_t:{c_t.shape}')
-        logging.info(f'out_t:{unpacked_out.shape}, lengths_out:{lengths_out}')
-        logging.info(f'linear:{out.shape}')
-        logging.info('')
+        # logging.info('--forward--')
+        # logging.info(f'x_t:{unpacked_x.shape},lengths_x:{lengths_x}')
+        # logging.info(f'h_t:{h_t.shape}', )
+        # logging.info(f'c_t:{c_t.shape}')
+        # logging.info(f'out_t:{unpacked_out.shape}, lengths_out:{lengths_out}')
+        # logging.info(f'linear:{out.shape}')
+        # logging.info('')
         return out

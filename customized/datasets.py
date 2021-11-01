@@ -33,14 +33,14 @@ def collate_fn_trainval(batch):
     # pack sequence
     packed_batch_x = pack_padded_sequence(pad_batch_x, lengths_x, enforce_sorted=True)
 
-    logging.info('--collate--')
-    for i, b in enumerate(batch):
-        logging.info(f'x_{i}:{b[0].shape}, y_{i}:{b[1].shape}')
-    logging.info(f'lengths_x:{lengths_x},lengths_y:{lengths_y}')
-    logging.info(f'pad_batch_x:{pad_batch_x.shape}')
-    logging.info(f'pad_batch_y:{pad_batch_y.shape}')
-    logging.info('packed_batch_x')
-    logging.info('')
+    # logging.info('--collate--')
+    # for i, b in enumerate(batch):
+    #     logging.info(f'x_{i}:{b[0].shape}, y_{i}:{b[1].shape}')
+    # logging.info(f'lengths_x:{lengths_x},lengths_y:{lengths_y}')
+    # logging.info(f'pad_batch_x:{pad_batch_x.shape}')
+    # logging.info(f'pad_batch_y:{pad_batch_y.shape}')
+    # logging.info('packed_batch_x')
+    # logging.info('')
 
     return packed_batch_x, pad_batch_y, lengths_x, lengths_y
 
