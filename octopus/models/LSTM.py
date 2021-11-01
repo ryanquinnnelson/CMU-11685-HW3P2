@@ -45,13 +45,18 @@ class BasicLSTM(nn.Module):
         unpacked_out, lengths_out = pad_packed_sequence(out, batch_first=False)
 
         # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-        out = self.linear(unpacked_out)
+        linear_out = self.linear(unpacked_out)
+
+        out = nn.functional.log_softmax(linear_out, dim=2)
 
         # logging.info('--forward--')
         # logging.info(f'x_t:{unpacked_x.shape},lengths_x:{lengths_x}')
         # logging.info(f'h_t:{h_t.shape}', )
         # logging.info(f'c_t:{c_t.shape}')
         # logging.info(f'out_t:{unpacked_out.shape}, lengths_out:{lengths_out}')
-        # logging.info(f'linear:{out.shape}')
+        # logging.info(f'linear:{linear_out.shape}')
+        # logging.info(f'softmax:{out.shape}')
+        # logging.info(f'linear:{linear_out[0][0]}')
+        # logging.info(f'softmax:{out[0][0]}')
         # logging.info('')
         return out

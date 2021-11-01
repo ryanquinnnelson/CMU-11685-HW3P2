@@ -34,7 +34,7 @@ class NumericalDatasetHandler:
         logging.info(f'Loaded {len(data)} training records and {len(labels)} corresponding labels.')
 
         # initialize dataset
-        dataset = self.train_class(data[:4], labels[:4])
+        dataset = self.train_class(data, labels)
 
         return dataset
 
@@ -46,7 +46,7 @@ class NumericalDatasetHandler:
         logging.info(f'Loaded {len(data)} validation records and {len(labels)} corresponding labels.')
 
         # initialize dataset
-        dataset = self.val_class(data[:4], labels[:4])
+        dataset = self.val_class(data, labels)
 
         return dataset
 
@@ -57,6 +57,6 @@ class NumericalDatasetHandler:
         logging.info(f'Loaded {len(data)} test records.')
 
         # initialize dataset
-        dataset = self.test_class(data[:4])
+        dataset = self.test_class(data)
 
         return dataset
