@@ -151,7 +151,7 @@ class Octopus:
         # load phases
         self.training = Training(self.train_loader, self.loss_func, self.devicehandler)
         self.evaluation = Evaluation(self.val_loader, self.loss_func, self.devicehandler, self.ctcdecodehandler)
-        self.testing = Testing(self.test_loader, self.devicehandler)
+        self.testing = Testing(self.test_loader, self.devicehandler,self.ctcdecodehandler)
 
         logging.info('Pipeline components are initialized.')
 

@@ -9,6 +9,9 @@ from customized.helper import decode_output, calculate_distances
 import logging
 import torch
 import warnings
+from customized.helper import out_to_phonemes, target_to_phonemes, convert_to_string, decode_output
+import customized.phoneme_list as pl
+
 
 warnings.filterwarnings('ignore')
 
@@ -182,7 +185,7 @@ class Testing:
     Defines object to manage testing phase of training.
     """
 
-    def __init__(self, test_loader, devicehandler):
+    def __init__(self, test_loader, devicehandler,ctcdecodehandler):
         """
         Initialize Testing object.
 
@@ -193,6 +196,7 @@ class Testing:
         logging.info('Loading testing phase...')
         self.test_loader = test_loader
         self.devicehandler = devicehandler
+        self.ctcdecodehandler = ctcdecodehandler
 
     def test_model(self, epoch, num_epochs, model):
         """
@@ -208,6 +212,8 @@ class Testing:
         """
         logging.info(f'Running epoch {epoch}/{num_epochs} of testing...')
         output = []
+
+        ctcdecode = self.ctcdecodehandler.ctcdecoder()
 
         with torch.no_grad():  # deactivate autograd engine to improve efficiency
 
@@ -226,8 +232,21 @@ class Testing:
 
                 # capture output for mini-batch
                 out = out.cpu().detach()  # extract from gpu if necessary
-                output.append(out)
 
-        out_all_batches = torch.cat(output, dim=1)  # dimension 1 is batch
+                # decode output
+                # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
+                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
 
-        return out_all_batches
+                # convert to strings using phoneme map (not phoneme list)
+                n = beam_results.shape[0]
+                # logging.info(f'Converting {n_batches} beam results to phonemes...')
+
+                for i in range(n):
+                    out_converted = out_to_phonemes(i, beam_results, out_lens, pl.PHONEME_MAP)
+                    # logging.info(f'out_converted[{i}]:{out_converted}')
+
+                    converted_str = convert_to_string(out_converted)
+                    # logging.info(f'converted_str[{i}]:{converted_str}')
+                    output.append(converted_str)
+
+        return output

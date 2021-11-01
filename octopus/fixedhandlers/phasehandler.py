@@ -26,8 +26,7 @@ class PhaseHandler:
             schedulerhandler (SchedulerHandler): handler for schedulers
             wandbconnector (WandbConnector): connector to wandb
             formatter (OutputFormatter): class defining how to format test output
-            load_from_checkpoint (Boolean): True if model environment should be loaded from a previously saved
-            checkpoint
+            load_from_checkpoint (Boolean): True if model environment should be loaded from a previously saved checkpoint
             checkpoint_file (str): Fully-qualified filename of checkpoint file to be loaded, if any
         """
         logging.info('Initializing phase handler...')
@@ -106,7 +105,7 @@ class PhaseHandler:
 
             # test
             out = testing.test_model(epoch, self.num_epochs, model)
-            out = self.formatter.format_output(out, ctcdecodehandler.ctcdecoder())
+            out = self.formatter.format_output(out)
             self.outputhandler.save(out, epoch)
 
             # stats
