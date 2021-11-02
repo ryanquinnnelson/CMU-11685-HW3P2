@@ -8,7 +8,7 @@ import logging
 import numpy as np
 
 
-# TODO Remove slicing of dataset when ready
+# TODO: Remove slicing of dataset when ready
 class NumericalDatasetHandler:
     def __init__(self, data_dir, train_data, train_labels, val_data, val_labels, test_data, train_class, val_class,
                  test_class, train_collate_fn, val_collate_fn, test_collate_fn):
@@ -34,7 +34,7 @@ class NumericalDatasetHandler:
         logging.info(f'Loaded {len(data)} training records and {len(labels)} corresponding labels.')
 
         # initialize dataset
-        dataset = self.train_class(data, labels)
+        dataset = self.train_class(data[:4], labels[:4])
 
         return dataset
 
@@ -46,7 +46,7 @@ class NumericalDatasetHandler:
         logging.info(f'Loaded {len(data)} validation records and {len(labels)} corresponding labels.')
 
         # initialize dataset
-        dataset = self.val_class(data, labels)
+        dataset = self.val_class(data[:4], labels[:4])
 
         return dataset
 
@@ -57,6 +57,6 @@ class NumericalDatasetHandler:
         logging.info(f'Loaded {len(data)} test records.')
 
         # initialize dataset
-        dataset = self.test_class(data)
+        dataset = self.test_class(data[:4])
 
         return dataset
