@@ -70,8 +70,8 @@ class WandbConnector:
                               notes=self.notes,
                               tags=self.tags,
                               config=self.config,
-                              reinit=True,
-                              mode='offline') # until online works again
+                              reinit=True)
+                              #mode='offline') # until online works again
 
         return wandb.config
 
