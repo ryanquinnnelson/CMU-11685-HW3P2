@@ -58,8 +58,8 @@ def calculate_distances(beam_results, out_lens, targets):
 
     # calculate distance for each record in the batch
     for i in range(n_batches):
-        out_converted = out_to_phonemes(i, beam_results, out_lens, pl.PHONEME_LIST)  # (BEAM_LEN,)
-        target_converted = target_to_phonemes(targets[i], pl.PHONEME_LIST)  # (TARGET_LEN,)
+        out_converted = out_to_phonemes(i, beam_results, out_lens, pl.PHONEME_MAP)  # (BEAM_LEN,)
+        target_converted = target_to_phonemes(targets[i], pl.PHONEME_MAP)  # (TARGET_LEN,)
 
         out_str = convert_to_string(out_converted)
         target_str = convert_to_string(target_converted)

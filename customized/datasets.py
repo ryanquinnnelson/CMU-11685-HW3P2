@@ -30,9 +30,6 @@ def collate_fn_trainval(batch):
     # pad_batch_y: (BATCHSIZE x MAX_UTTERANCE_LABEL_LENGTH)
     pad_batch_y = pad_sequence(batch_y, batch_first=True)  # CTCLoss expects batch first for targets
 
-    # pack sequence
-    packed_batch_x = pack_padded_sequence(pad_batch_x, lengths_x, enforce_sorted=True)
-
     # logging.info('--collate--')
     # for i, b in enumerate(batch):
     #     logging.info(f'x_{i}:{b[0].shape}, y_{i}:{b[1].shape}')
@@ -42,7 +39,7 @@ def collate_fn_trainval(batch):
     # logging.info('packed_batch_x')
     # logging.info('')
 
-    return packed_batch_x, pad_batch_y, lengths_x, lengths_y
+    return pad_batch_x, pad_batch_y, lengths_x, lengths_y
 
 
 class TrainValDataset(Dataset):
@@ -76,10 +73,7 @@ def collate_fn_test(batch):
     # Pad sequences to have the same number of rows per utterance
     pad_batch_x = pad_sequence(batch, batch_first=False)
 
-    # pack sequence
-    packed_batch_x = pack_padded_sequence(pad_batch_x, lengths_x, enforce_sorted=True)
-
-    return packed_batch_x, lengths_x
+    return pad_batch_x, lengths_x
 
 
 class TestDataset(Dataset):
