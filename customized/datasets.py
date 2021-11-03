@@ -23,12 +23,12 @@ def collate_fn_trainval(batch):
 
     # Pad sequences to have the same number of rows per utterance
     # pad_batch_x: (MAX_N_TIMESTEPS x BATCHSIZE x FEATURES)
-    pad_batch_x = pad_sequence(batch_x, batch_first=False)  # CTCLoss expects batch second for input
+    batch_x = pad_sequence(batch_x, batch_first=False)  # CTCLoss expects batch second for input
 
     # ?? do we pad and pack targets
     # Pad targets to have the same number of elements per utterance
     # pad_batch_y: (BATCHSIZE x MAX_UTTERANCE_LABEL_LENGTH)
-    pad_batch_y = pad_sequence(batch_y, batch_first=True)  # CTCLoss expects batch first for targets
+    batch_y = pad_sequence(batch_y, batch_first=True)  # CTCLoss expects batch first for targets
 
     # logging.info('--collate--')
     # for i, b in enumerate(batch):
@@ -39,7 +39,7 @@ def collate_fn_trainval(batch):
     # logging.info('packed_batch_x')
     # logging.info('')
 
-    return pad_batch_x, pad_batch_y, lengths_x, lengths_y
+    return batch_x, batch_y, lengths_x, lengths_y
 
 
 class TrainValDataset(Dataset):
@@ -71,9 +71,9 @@ def collate_fn_test(batch):
     lengths_x = torch.LongTensor([len(x) for x in batch])
 
     # Pad sequences to have the same number of rows per utterance
-    pad_batch_x = pad_sequence(batch, batch_first=False)
+    batch = pad_sequence(batch, batch_first=False)
 
-    return pad_batch_x, lengths_x
+    return batch, lengths_x
 
 
 class TestDataset(Dataset):

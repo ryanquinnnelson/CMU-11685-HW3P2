@@ -8,6 +8,24 @@ import logging
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+from pynvml import *
+
+
+def check_status():
+    # check gpu properties
+    t = torch.cuda.get_device_properties(0).total_memory
+    r = torch.cuda.memory_reserved(0)
+    a = torch.cuda.memory_allocated(0)
+    f = r - a  # free inside reserved
+    logging.info(f'total_memory:{t}')
+    logging.info(f'free inside reserved:{f}')
+
+    nvmlInit()
+    h = nvmlDeviceGetHandleByIndex(0)
+    info = nvmlDeviceGetMemoryInfo(h)
+    logging.info(f'total    : {info.total}')
+    logging.info(f'free     : {info.free}')
+    logging.info(f'used     : {info.used}')
 
 
 class BasicLSTM(nn.Module):
@@ -124,36 +142,59 @@ class CnnLSTM(nn.Module):
         nn.init.xavier_normal_(self.linear.weight)  # ?? correct choice
         # TODO: could do batch normalization after linear
 
-    def forward(self, x, lengths_x):
+    def forward(self, x, lengths_x, i):
+        if i == 0:
+            logging.info('forward pass')
+            check_status()
         # expects batch size first, channels next
-        x_transposed1 = torch.transpose(x, 0, 1)  # (BATCHSIZE x N_TIMESTEPS x FEATURES)
-        x_transposed2 = torch.transpose(x_transposed1, 1, 2)  # (BATCHSIZE x FEATURES x N_TIMESTEPS) ??is this correct
-        out_cnn = self.cnn(x_transposed2)  # (BATCHSIZE x OUT_CHANNELS x N_TIMESTEPS)
+        x = torch.transpose(x, 0, 1)  # (BATCHSIZE x N_TIMESTEPS x FEATURES)
+        x = torch.transpose(x, 1, 2)  # (BATCHSIZE x FEATURES x N_TIMESTEPS) ??is this correct
 
+        if i == 0:
+            logging.info('after transposing')
+            check_status()
+        x = self.cnn(x)  # (BATCHSIZE x OUT_CHANNELS x N_TIMESTEPS)
+
+        if i == 0:
+            logging.info('after cnn')
+            check_status()
         # transpose dimensions to match expectations for remaining layers
-        out_cnn_transposed1 = torch.transpose(out_cnn, 0, 1)  # (OUT_CHANNELS x BATCHSIZE x N_TIMESTEPS)
-        out_cnn_transposed2 = torch.transpose(out_cnn_transposed1, 0, 2)  # (N_TIMESTEPS x BATCHSIZE x OUT_CHANNELS)
+        x = torch.transpose(x, 0, 1)  # (OUT_CHANNELS x BATCHSIZE x N_TIMESTEPS)
+        x = torch.transpose(x, 0, 2)  # (N_TIMESTEPS x BATCHSIZE x OUT_CHANNELS)
 
+        if i == 0:
+            logging.info('after transposing again')
+            check_status()
         # pack sequence after any cnn layers
         # packed_x: (N_TIMESTEPS x BATCHSIZE x OUT_CHANNELS)
-        packed_x = pack_padded_sequence(out_cnn_transposed2, lengths_x.cpu(), enforce_sorted=True)
-
+        x = pack_padded_sequence(x, lengths_x.cpu(), enforce_sorted=True)
+        if i == 0:
+            logging.info('after packing')
+            check_status()
         # TODO: initialize hidden layer and cell state layer -  look into this
         # out: (N_TIMESTEPS x BATCHSIZE x HIDDEN_SIZE * DIRECTIONS)
         # h_t: (DIRECTIONS x BATCHSIZE x HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
         # c_t: (DIRECTIONS x BATCHSIZE x HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
-        out, (h_t, c_t) = self.lstm(packed_x)
-
+        x, (h_t, c_t) = self.lstm(x)
+        if i == 0:
+            logging.info('after lstm')
+            check_status()
         # unpack sequence for use in linear layer
         # unpacked_x: (N_TIMESTEPS x BATCHSIZE x HIDDEN_SIZE * DIRECTIONS)
         # lengths_x: (BATCHSIZE,)
-        unpacked_out, lengths_out = pad_packed_sequence(out, batch_first=False)
-
+        x, lengths_out = pad_packed_sequence(x, batch_first=False)
+        if i == 0:
+            logging.info('after unpacking')
+            check_status()
         # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-        linear_out = self.linear(unpacked_out)
-
-        out = nn.functional.log_softmax(linear_out, dim=2)  # N_LABELS is the dimension to softmax
-
+        x = self.linear(x)
+        if i == 0:
+            logging.info('after linear')
+            check_status()
+        x = nn.functional.log_softmax(x, dim=2)  # N_LABELS is the dimension to softmax
+        if i == 0:
+            logging.info('after softmax')
+            check_status()
         # logging.info('--forward--')
         # logging.info(f'x_t:{x.shape},lengths_x:{lengths_x}')
         # logging.info(f'x_transposed:{x_transposed1.shape}')
@@ -167,4 +208,4 @@ class CnnLSTM(nn.Module):
         # logging.info(f'linear:{linear_out.shape}')
         # logging.info(f'softmax:{out.shape}')
         # logging.info('')
-        return out
+        return x

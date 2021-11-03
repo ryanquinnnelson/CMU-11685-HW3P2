@@ -11,7 +11,7 @@ import sys
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"  # better error tracking from gpu
 
 # reusable local modules
-from octopus.helper import _to_string_list, _to_float_dict, _to_int_dict
+from octopus.helper import _to_string_list, _to_float_dict, _to_int_dict,check_status
 from octopus.connectors.kaggleconnector import KaggleConnector
 from octopus.connectors.wandbconnector import WandbConnector
 from octopus.fixedhandlers.checkpointhandler import CheckpointHandler
@@ -75,7 +75,6 @@ class Octopus:
 
         # variable handlers
         self.inputhandler, self.modelhandler, self.ctcdecodehandler = initialize_variable_handlers(config)
-
         logging.info('octopus initialization is complete.')
 
     def install_packages(self):
@@ -93,7 +92,6 @@ class Octopus:
         """
 
         logging.info('octopus is setting up the environment...')
-
         # wandb
         self.wandbconnector.setup()
 
@@ -112,7 +110,6 @@ class Octopus:
 
         # dataloaders
         self.dataloaderhandler.setup(self.devicehandler.device, self.inputhandler)
-
         logging.info('octopus has finished setting up the environment.')
 
     def download_data(self):
@@ -132,12 +129,14 @@ class Octopus:
     def initialize_pipeline_components(self):
 
         logging.info('octopus is initializing pipeline components...')
-
         # initialize model
         self.model = self.modelhandler.get_model()
-        self.model = self.devicehandler.move_model_to_device(
-            self.model)  # move model before initializing optimizer - see Note 1
+        logging.info('after initializing model')
+        check_status()
+        self.model = self.devicehandler.move_model_to_device(self.model)  # move before initializing optimizer - Note 1
         self.wandbconnector.watch(self.model)
+        logging.info('after loading model')
+        check_status()
 
         # initialize model components
         self.loss_func = self.criterionhandler.get_loss_function()
@@ -152,7 +151,8 @@ class Octopus:
         self.training = Training(self.train_loader, self.loss_func, self.devicehandler)
         self.evaluation = Evaluation(self.val_loader, self.loss_func, self.devicehandler, self.ctcdecodehandler)
         self.testing = Testing(self.test_loader, self.devicehandler,self.ctcdecodehandler)
-
+        logging.info('after loading phases')
+        check_status()
         logging.info('Pipeline components are initialized.')
 
     def run_pipeline(self):

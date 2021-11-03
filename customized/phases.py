@@ -4,14 +4,13 @@ All things related to training phases.
 
 import numpy as np
 
-from customized.helper import decode_output, calculate_distances
+from customized.helper import decode_output, calculate_distances, check_status
 
 import logging
 import torch
 import warnings
 from customized.helper import out_to_phonemes, target_to_phonemes, convert_to_string, decode_output
 import customized.phoneme_list as pl
-
 
 warnings.filterwarnings('ignore')
 
@@ -59,13 +58,20 @@ class Training:
             # prep
             optimizer.zero_grad()
             torch.cuda.empty_cache()
+
             inputs, targets = self.devicehandler.move_data_to_device(model, inputs, targets)
             input_lengths, target_lengths = self.devicehandler.move_data_to_device(model, input_lengths, target_lengths)
+            if i == 0:
+                logging.info('after loading data')
+                check_status()
 
             # compute forward pass
             # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
             # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-            out = model.forward(inputs, input_lengths)
+            out = model.forward(inputs, input_lengths, i)
+            if i == 0:
+                logging.info('after forward pass')
+                check_status()
 
             # calculate validation loss
             # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
@@ -78,17 +84,25 @@ class Training:
             # logging.info(f'loss:{loss.item()}')
             # logging.info('')
 
-            # compute backward pass
-            loss.backward()
-
-            # update model weights
-            optimizer.step()
-
             # delete mini-batch data from device
             del inputs
             del targets
             del input_lengths
             del target_lengths
+
+            if i == 0:
+                logging.info('after deleting data')
+                check_status()
+
+            # compute backward pass
+            loss.backward()
+
+            if i == 0:
+                logging.info('after backward pass')
+                check_status()
+
+            # update model weights
+            optimizer.step()
 
         # calculate average loss across all mini-batches
         train_loss /= len(self.train_loader)
@@ -144,10 +158,17 @@ class Evaluation:
                 input_lengths, target_lengths = self.devicehandler.move_data_to_device(model, input_lengths,
                                                                                        target_lengths)
 
+                if i == 0:
+                    logging.info('after loading data')
+                    check_status()
+
                 # compute forward pass
                 # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
                 # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-                out = model.forward(inputs, input_lengths)
+                out = model.forward(inputs, input_lengths, i)
+                if i == 0:
+                    logging.info('after forward pass')
+                    check_status()
 
                 # calculate validation loss
                 # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
@@ -166,12 +187,19 @@ class Evaluation:
                 beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
                 distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
                 running_distance += distance  # ?? something more for running total
+                if i == 0:
+                    logging.info('after calculating distances')
+                    check_status()
 
                 # delete mini-batch from device
                 del inputs
                 del targets
                 del target_lengths
                 del input_lengths
+
+                if i == 0:
+                    logging.info('after deleting data')
+                    check_status()
 
             # calculate evaluation metrics
             val_loss /= len(self.val_loader)  # average per mini-batch
@@ -185,7 +213,7 @@ class Testing:
     Defines object to manage testing phase of training.
     """
 
-    def __init__(self, test_loader, devicehandler,ctcdecodehandler):
+    def __init__(self, test_loader, devicehandler, ctcdecodehandler):
         """
         Initialize Testing object.
 
@@ -228,7 +256,7 @@ class Testing:
                 # compute forward pass
                 # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
                 # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-                out = model.forward(inputs, input_lengths)
+                out = model.forward(inputs, input_lengths, i)
 
                 # capture output for mini-batch
                 out = out.cpu().detach()  # extract from gpu if necessary

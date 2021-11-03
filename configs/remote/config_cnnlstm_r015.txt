@@ -74,7 +74,7 @@ log_probs_input=True
 [dataloader]
 num_workers=8
 pin_memory=True
-batch_size=256
+batch_size=128
 
 
 

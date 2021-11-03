@@ -1,5 +1,5 @@
 [DEFAULT]
-run_name = CnnLSTM-Run-06
+run_name = CnnLSTM-Run-08
 
 
 
@@ -74,7 +74,7 @@ log_probs_input=True
 [dataloader]
 num_workers=8
 pin_memory=True
-batch_size=256
+batch_size=128
 
 
 
@@ -86,7 +86,7 @@ hidden_size=256
 num_layers=5
 output_size=42
 bidirectional=True
-dropout=0.0
+dropout=0.3
 
 
 

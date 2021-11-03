@@ -4,6 +4,24 @@ import numpy as np
 import torch
 
 from customized import phoneme_list as pl
+from pynvml import *
+
+
+def check_status():
+    # check gpu properties
+    t = torch.cuda.get_device_properties(0).total_memory
+    r = torch.cuda.memory_reserved(0)
+    a = torch.cuda.memory_allocated(0)
+    f = r - a  # free inside reserved
+    logging.info(f'total_memory:{t}')
+    logging.info(f'free inside reserved:{f}')
+
+    nvmlInit()
+    h = nvmlDeviceGetHandleByIndex(0)
+    info = nvmlDeviceGetMemoryInfo(h)
+    logging.info(f'total    : {info.total}')
+    logging.info(f'free     : {info.free}')
+    logging.info(f'used     : {info.used}')
 
 
 def out_to_phonemes(i, beam_results, out_lens, phoneme_list):
