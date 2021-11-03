@@ -10,6 +10,26 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from pynvml import *
 from collections import OrderedDict
+import numpy as np
+
+
+# source for orthogonal initializer
+# https://github.com/Lasagne/Lasagne/blob/master/lasagne/init.py
+# with minor changes
+def sample(shape, gain):
+    flat_shape = (shape[0], np.prod(shape[1:]))
+    a = np.random.normal(0.0, 1.0, flat_shape)
+    u, _, v = np.linalg.svd(a, full_matrices=False)
+    # pick the one with the correct shape
+    q = u if u.shape == flat_shape else v
+    q = q.reshape(shape)
+    return np.asarray(gain * q, dtype=np.float64)
+
+
+def initialize_lstm_weights(shape):
+    gain = np.sqrt(2)  # relu (default gain = 1.0)
+    w = sample(shape, gain)
+    return w
 
 
 def check_status():
@@ -142,7 +162,7 @@ def _init_weights(layer):
 
 class CnnLSTM(nn.Module):
     def __init__(self, lstm_input_size, hidden_size, num_layers,
-                 output_size, bidirectional, dropout, conv_dicts, lin1_output_size,lin1_dropout):
+                 output_size, bidirectional, dropout, conv_dicts, lin1_output_size, lin1_dropout):
         super(CnnLSTM, self).__init__()
 
         # build cnn layers
@@ -216,6 +236,7 @@ class CnnLSTM(nn.Module):
         #     logging.info('forward pass')
         #     check_status()
         # expects batch size first, channels next
+        batchsize = x.shape[0]
         x = torch.transpose(x, 0, 1)  # (BATCHSIZE x N_TIMESTEPS x FEATURES)
         x = torch.transpose(x, 1, 2)  # (BATCHSIZE x FEATURES x N_TIMESTEPS) ??is this correct
 
@@ -241,10 +262,20 @@ class CnnLSTM(nn.Module):
         #     logging.info('after packing')
         #     check_status()
         # TODO: initialize hidden layer and cell state layer -  look into this
+        directions = 2 if self.lstm.bidirectional else 1
+        hidden_size = self.lstm.hidden_size
+
+        h_0 = initialize_lstm_weights((directions, batchsize, hidden_size))
+        if i == 0:
+            logging.info(f'h_0:{h_0.shape}')
+        c_0 = initialize_lstm_weights((directions, batchsize, hidden_size))
+        if i == 0:
+            logging.info(f'c_0:{c_0.shape}')
+
         # out: (N_TIMESTEPS x BATCHSIZE x HIDDEN_SIZE * DIRECTIONS)
         # h_t: (DIRECTIONS x BATCHSIZE x HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
         # c_t: (DIRECTIONS x BATCHSIZE x HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
-        x, (h_t, c_t) = self.lstm(x)
+        x, (h_t, c_t) = self.lstm(x, (h_0, c_0))
         # if i == 0:
         #     logging.info('after lstm')
         #     check_status()
