@@ -10,7 +10,7 @@ from octopus.models import LSTM
 
 class LstmHandler:
     def __init__(self, model_type, input_size, hidden_size, num_layers,
-                 output_size, bidirectional, dropout):
+                 output_size, bidirectional, dropout, conv_dict):
         self.model_type = model_type
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -18,6 +18,7 @@ class LstmHandler:
         self.output_size = output_size
         self.bidirectional = bidirectional
         self.dropout = dropout
+        self.conv_dict = conv_dict
         logging.info('Initializing LSTM handler...')
 
     def get_model(self):
@@ -26,5 +27,9 @@ class LstmHandler:
         if self.model_type == 'BasicLSTM':
             model = LSTM.BasicLSTM(self.input_size, self.hidden_size, self.num_layers,
                                    self.output_size, self.bidirectional, self.dropout)
+        elif self.model_type == 'CnnLSTM':
+
+            model = LSTM.CnnLSTM(self.input_size, self.hidden_size, self.num_layers, self.output_size,
+                                 self.bidirectional, self.dropout, self.conv_dict)
         logging.info(f'Model initialized:\n{model}')
         return model

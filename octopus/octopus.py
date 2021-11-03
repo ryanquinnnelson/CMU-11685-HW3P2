@@ -11,7 +11,7 @@ import sys
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"  # better error tracking from gpu
 
 # reusable local modules
-from octopus.helper import _to_string_list, _to_float_dict
+from octopus.helper import _to_string_list, _to_float_dict, _to_int_dict
 from octopus.connectors.kaggleconnector import KaggleConnector
 from octopus.connectors.wandbconnector import WandbConnector
 from octopus.fixedhandlers.checkpointhandler import CheckpointHandler
@@ -395,6 +395,11 @@ def initialize_variable_handlers(config):
         inputhandler = None
 
     # model
+    if config['model']['model_type'] == 'CnnLSTM':
+        conv_dict = _to_int_dict(config['model']['conv_kwargs'])
+    else:
+        conv_dict = None
+
     if 'LSTM' in config['model']['model_type']:
         modelhandler = LstmHandler(config['model']['model_type'],
                                    config['model'].getint('input_size'),
@@ -402,7 +407,8 @@ def initialize_variable_handlers(config):
                                    config['model'].getint('num_layers'),
                                    config['model'].getint('output_size'),
                                    config['model'].getboolean('bidirectional'),
-                                   config['model'].getfloat('dropout'))
+                                   config['model'].getfloat('dropout'),
+                                   conv_dict)
 
     else:
         modelhandler = None

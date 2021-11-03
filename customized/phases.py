@@ -65,7 +65,7 @@ class Training:
             # compute forward pass
             # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
             # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-            out = model.forward(inputs)
+            out = model.forward(inputs, input_lengths)
 
             # calculate validation loss
             # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
@@ -147,7 +147,7 @@ class Evaluation:
                 # compute forward pass
                 # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
                 # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-                out = model.forward(inputs)
+                out = model.forward(inputs, input_lengths)
 
                 # calculate validation loss
                 # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
@@ -228,7 +228,7 @@ class Testing:
                 # compute forward pass
                 # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
                 # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-                out = model.forward(inputs)
+                out = model.forward(inputs, input_lengths)
 
                 # capture output for mini-batch
                 out = out.cpu().detach()  # extract from gpu if necessary

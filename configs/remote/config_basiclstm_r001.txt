@@ -1,5 +1,5 @@
 [DEFAULT]
-run_name = BasicLTSM-Run-02
+run_name = CnnLSTM-Run-01
 
 
 
@@ -29,14 +29,14 @@ wandb_dir = /home/ubuntu/
 entity = ryanquinnnelson
 project = CMU-11685-HW3P2-octopus
 notes = RNN Utterance to Phoneme mapping
-tags = octopus,LTSM
+tags = octopus,LTSM,CNN
 
 
 
 
 [stats]
 comparison_metric=avg_distance
-comparison_best_is_max=True
+comparison_best_is_max=False
 comparison_patience=40
 val_metric_name=avg_distance
 
@@ -74,19 +74,19 @@ log_probs_input=True
 [dataloader]
 num_workers=8
 pin_memory=True
-batch_size=2
+batch_size=256
 
 
 
 [model]
-model_type=BasicLSTM
-input_size=40
-hidden_size=128
+model_type=CnnLSTM
+conv_kwargs=in_channels=40,out_channels=128,kernel_size=3,stride=1,padding=1,dilation=1
+input_size=128
+hidden_size=256
 num_layers=1
 output_size=42
 bidirectional=False
 dropout=0.0
-
 
 
 
@@ -103,6 +103,6 @@ num_epochs = 2
 criterion_type=CTCLoss
 optimizer_type=Adam
 optimizer_kwargs=lr=0.002,weight_decay=0.000005
-scheduler_type=StepLR
-scheduler_kwargs=step_size=5,gamma=0.5,verbose=True
-scheduler_plateau_metric=None
+scheduler_type=ReduceLROnPlateau
+scheduler_kwargs=factor=0.5,patience=3,mode=min,verbose=True
+scheduler_plateau_metric=avg_distance
