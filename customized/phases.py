@@ -84,6 +84,10 @@ class Training:
             # logging.info(f'loss:{loss.item()}')
             # logging.info('')
 
+            if i == 0:
+                logging.info('after calculating loss')
+                check_status()
+
             # delete mini-batch data from device
             del inputs
             del targets
@@ -180,6 +184,9 @@ class Evaluation:
                 # logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
                 # logging.info(f'loss:{loss.item()}')
                 # logging.info('')
+                if i == 0:
+                    logging.info('after calculating loss')
+                    check_status()
 
                 # calculate distance between actual and desired output
                 out = out.cpu().detach()  # extract from gpu
