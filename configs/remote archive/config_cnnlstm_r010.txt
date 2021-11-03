@@ -1,5 +1,5 @@
 [DEFAULT]
-run_name = CnnLSTM-Run-08
+run_name = CnnLSTM-Run-10
 
 
 
@@ -65,7 +65,7 @@ alpha=0
 beta=0
 cutoff_top_n=40
 cutoff_prob=1.0
-beam_width=1
+beam_width=4
 blank_id=0
 log_probs_input=True
 
@@ -74,7 +74,7 @@ log_probs_input=True
 [dataloader]
 num_workers=8
 pin_memory=True
-batch_size=128
+batch_size=64
 
 
 

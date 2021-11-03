@@ -61,17 +61,17 @@ class Training:
 
             inputs, targets = self.devicehandler.move_data_to_device(model, inputs, targets)
             input_lengths, target_lengths = self.devicehandler.move_data_to_device(model, input_lengths, target_lengths)
-            if i == 0:
-                logging.info('after loading data')
-                check_status()
+            # if i == 0:
+            #     logging.info('after loading data')
+            #     check_status()
 
             # compute forward pass
             # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
             # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
             out = model.forward(inputs, input_lengths, i)
-            if i == 0:
-                logging.info('after forward pass')
-                check_status()
+            # if i == 0:
+            #     logging.info('after forward pass')
+            #     check_status()
 
             # calculate validation loss
             # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
@@ -84,9 +84,9 @@ class Training:
             # logging.info(f'loss:{loss.item()}')
             # logging.info('')
 
-            if i == 0:
-                logging.info('after calculating loss')
-                check_status()
+            # if i == 0:
+            #     logging.info('after calculating loss')
+            #     check_status()
 
             # delete mini-batch data from device
             del inputs
@@ -94,16 +94,16 @@ class Training:
             del input_lengths
             del target_lengths
 
-            if i == 0:
-                logging.info('after deleting data')
-                check_status()
+            # if i == 0:
+            #     logging.info('after deleting data')
+            #     check_status()
 
             # compute backward pass
             loss.backward()
 
-            if i == 0:
-                logging.info('after backward pass')
-                check_status()
+            # if i == 0:
+            #     logging.info('after backward pass')
+            #     check_status()
 
             # update model weights
             optimizer.step()
@@ -162,17 +162,17 @@ class Evaluation:
                 input_lengths, target_lengths = self.devicehandler.move_data_to_device(model, input_lengths,
                                                                                        target_lengths)
 
-                if i == 0:
-                    logging.info('after loading data')
-                    check_status()
+                # if i == 0:
+                #     logging.info('after loading data')
+                #     check_status()
 
                 # compute forward pass
                 # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
                 # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
                 out = model.forward(inputs, input_lengths, i)
-                if i == 0:
-                    logging.info('after forward pass')
-                    check_status()
+                # if i == 0:
+                #     logging.info('after forward pass')
+                #     check_status()
 
                 # calculate validation loss
                 # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
@@ -184,9 +184,9 @@ class Evaluation:
                 # logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
                 # logging.info(f'loss:{loss.item()}')
                 # logging.info('')
-                if i == 0:
-                    logging.info('after calculating loss')
-                    check_status()
+                # if i == 0:
+                #     logging.info('after calculating loss')
+                #     check_status()
 
                 # calculate distance between actual and desired output
                 out = out.cpu().detach()  # extract from gpu
@@ -194,9 +194,9 @@ class Evaluation:
                 beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
                 distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
                 running_distance += distance  # ?? something more for running total
-                if i == 0:
-                    logging.info('after calculating distances')
-                    check_status()
+                # if i == 0:
+                #     logging.info('after calculating distances')
+                #     check_status()
 
                 # delete mini-batch from device
                 del inputs
@@ -204,9 +204,9 @@ class Evaluation:
                 del target_lengths
                 del input_lengths
 
-                if i == 0:
-                    logging.info('after deleting data')
-                    check_status()
+                # if i == 0:
+                #     logging.info('after deleting data')
+                #     check_status()
 
             # calculate evaluation metrics
             val_loss /= len(self.val_loader)  # average per mini-batch

@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from pynvml import *
+from collections import OrderedDict
 
 
 def check_status():
@@ -120,81 +121,149 @@ def _calc_output_size_from_dict(input_size, parm_dict):
     return output_size
 
 
+def _init_weights(layer):
+    """
+    Perform initialization of layer weights if layer is a Conv2d layer.
+    Args:
+        layer: layer under consideration
+
+    Returns: None
+
+    """
+    if isinstance(layer, nn.Conv1d):
+        logging.info('initializing conv layer with kaiming normal...')
+        nn.init.kaiming_normal_(layer.weight)
+    elif isinstance(layer, nn.Linear):
+        logging.info('initializing linear layer with xavier uniform...')
+        nn.init.xavier_uniform_(layer.weight)
+    else:
+        logging.info('not initializing layer...')
+
+
 class CnnLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers,
-                 output_size, bidirectional, dropout, conv_dict):
+    def __init__(self, lstm_input_size, hidden_size, num_layers,
+                 output_size, bidirectional, dropout, conv_dicts, lin1_output_size,lin1_dropout):
         super(CnnLSTM, self).__init__()
 
-        self.cnn = nn.Conv1d(**conv_dict)
-        nn.init.kaiming_normal_(self.cnn.weight)
-        layer_output_size = _calc_output_size_from_dict(input_size, conv_dict)
-        # TODO: batch normalization for cnn
+        # build cnn layers
+        sequence = []
+        for i, conv_dict in enumerate(conv_dicts):
+            # convolution
+            layer_name = 'conv' + str(i + 1)
+            conv_tuple = (layer_name, nn.Conv1d(**conv_dict))
+            sequence.append(conv_tuple)
 
-        self.lstm = nn.LSTM(input_size=layer_output_size,
+        self.cnn_layers = nn.Sequential(OrderedDict(sequence))
+        # TODO: add second conv layer 40->128,128->256
+        # self.cnn = nn.Conv1d(**conv_dict)
+        # nn.init.kaiming_normal_(self.cnn.weight)
+        # TODO: batch normalization for cnn?
+
+        # initialize weights
+        self.cnn_layers.apply(_init_weights)
+
+        # run at least 15-20 epochs before stopping
+        # 256 hidden, 5-9 layers, .2-.3 dropout, init lstm
+        # bn+dropout for linear, 1-2 linear 512->256, relu, bidrectional
+        # first few should start with . test
+        # epochs 40-100 epochs
+        # use valloss not distance
+        # bias? off for cnn, linear turn on maybe
+        self.lstm = nn.LSTM(input_size=lstm_input_size,
                             hidden_size=hidden_size,
                             num_layers=num_layers,
                             batch_first=False,  # faster if we don't do batch first
                             dropout=dropout,
                             bidirectional=bidirectional)
 
+        # build linear layers
         direction = 2 if bidirectional else 1
-        self.linear = nn.Linear(hidden_size * direction, output_size)  # ??use bias=False?
-        nn.init.xavier_normal_(self.linear.weight)  # ?? correct choice
+
+        sequence = []
+
+        # linear
+        layer_name = 'lin1'
+        lin_tuple = (layer_name, nn.Linear(hidden_size * direction, lin1_output_size))
+        sequence.append(lin_tuple)
+
+        # batch normalization
+        layer_name = 'bn1'
+        bn_tuple = (layer_name, nn.BatchNorm1d(lin1_output_size))
+        sequence.append(bn_tuple)
+
+        # dropout (optional)
+        if lin1_dropout > 0:
+            layer_name = 'drop1'
+            drop_tuple = (layer_name, nn.Dropout(lin1_dropout))
+            sequence.append(drop_tuple)
+
+        layer_name = 'relu1'
+        relu_tuple = (layer_name, nn.ReLU(inplace=True))
+        sequence.append(relu_tuple)
+
+        # linear
+        layer_name = 'lin2'
+        lin_tuple = (layer_name, nn.Linear(lin1_output_size, output_size))
+        sequence.append(lin_tuple)
+        self.linear_layers = nn.Sequential(OrderedDict(sequence))
+        self.linear_layers.apply(_init_weights)
+        # self.linear = nn.Linear(hidden_size * direction, output_size)  # ??use bias=False?
+        # nn.init.xavier_uniform_(self.linear.weight)  # ?? correct choice
         # TODO: could do batch normalization after linear
 
     def forward(self, x, lengths_x, i):
-        if i == 0:
-            logging.info('forward pass')
-            check_status()
+        # if i == 0:
+        #     logging.info('forward pass')
+        #     check_status()
         # expects batch size first, channels next
         x = torch.transpose(x, 0, 1)  # (BATCHSIZE x N_TIMESTEPS x FEATURES)
         x = torch.transpose(x, 1, 2)  # (BATCHSIZE x FEATURES x N_TIMESTEPS) ??is this correct
 
-        if i == 0:
-            logging.info('after transposing')
-            check_status()
+        # if i == 0:
+        #     logging.info('after transposing')
+        #     check_status()
         x = self.cnn(x)  # (BATCHSIZE x OUT_CHANNELS x N_TIMESTEPS)
 
-        if i == 0:
-            logging.info('after cnn')
-            check_status()
+        # if i == 0:
+        #     logging.info('after cnn')
+        #     check_status()
         # transpose dimensions to match expectations for remaining layers
         x = torch.transpose(x, 0, 1)  # (OUT_CHANNELS x BATCHSIZE x N_TIMESTEPS)
         x = torch.transpose(x, 0, 2)  # (N_TIMESTEPS x BATCHSIZE x OUT_CHANNELS)
 
-        if i == 0:
-            logging.info('after transposing again')
-            check_status()
+        # if i == 0:
+        #     logging.info('after transposing again')
+        #     check_status()
         # pack sequence after any cnn layers
         # packed_x: (N_TIMESTEPS x BATCHSIZE x OUT_CHANNELS)
         x = pack_padded_sequence(x, lengths_x.cpu(), enforce_sorted=True)
-        if i == 0:
-            logging.info('after packing')
-            check_status()
+        # if i == 0:
+        #     logging.info('after packing')
+        #     check_status()
         # TODO: initialize hidden layer and cell state layer -  look into this
         # out: (N_TIMESTEPS x BATCHSIZE x HIDDEN_SIZE * DIRECTIONS)
         # h_t: (DIRECTIONS x BATCHSIZE x HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
         # c_t: (DIRECTIONS x BATCHSIZE x HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
         x, (h_t, c_t) = self.lstm(x)
-        if i == 0:
-            logging.info('after lstm')
-            check_status()
+        # if i == 0:
+        #     logging.info('after lstm')
+        #     check_status()
         # unpack sequence for use in linear layer
         # unpacked_x: (N_TIMESTEPS x BATCHSIZE x HIDDEN_SIZE * DIRECTIONS)
         # lengths_x: (BATCHSIZE,)
         x, lengths_out = pad_packed_sequence(x, batch_first=False)
-        if i == 0:
-            logging.info('after unpacking')
-            check_status()
+        # if i == 0:
+        #     logging.info('after unpacking')
+        #     check_status()
         # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-        x = self.linear(x)
-        if i == 0:
-            logging.info('after linear')
-            check_status()
+        x = self.linear_layers(x)
+        # if i == 0:
+        #     logging.info('after linear')
+        #     check_status()
         x = nn.functional.log_softmax(x, dim=2)  # N_LABELS is the dimension to softmax
-        if i == 0:
-            logging.info('after softmax')
-            check_status()
+        # if i == 0:
+        #     logging.info('after softmax')
+        #     check_status()
         # logging.info('--forward--')
         # logging.info(f'x_t:{x.shape},lengths_x:{lengths_x}')
         # logging.info(f'x_transposed:{x_transposed1.shape}')

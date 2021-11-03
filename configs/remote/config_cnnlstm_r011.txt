@@ -74,19 +74,21 @@ log_probs_input=True
 [dataloader]
 num_workers=8
 pin_memory=True
-batch_size=128
+batch_size=64
 
 
 
 [model]
 model_type=CnnLSTM
-conv_kwargs=in_channels=40,out_channels=128,kernel_size=3,stride=1,padding=1,dilation=1
-input_size=128
+conv_kwargs=1.in_channels=40,1.out_channels=128,1.kernel_size=3,1.stride=1,1.padding=1,1.dilation=1,2.in_channels=128,2.out_channels=256,2.kernel_size=3,2.stride=1,2.padding=1,2.dilation=1
+lstm_input_size=256
 hidden_size=256
 num_layers=5
 output_size=42
 bidirectional=True
-dropout=0.3
+dropout=0.1
+lin1_output_size=256
+lin1_dropout=0.1
 
 
 
@@ -105,4 +107,4 @@ optimizer_type=Adam
 optimizer_kwargs=lr=0.002,weight_decay=0.000005
 scheduler_type=ReduceLROnPlateau
 scheduler_kwargs=factor=0.5,patience=3,mode=min,verbose=True
-scheduler_plateau_metric=avg_distance
+scheduler_plateau_metric=val_loss

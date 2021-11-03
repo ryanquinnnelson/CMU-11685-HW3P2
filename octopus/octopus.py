@@ -11,7 +11,7 @@ import sys
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"  # better error tracking from gpu
 
 # reusable local modules
-from octopus.helper import _to_string_list, _to_float_dict, _to_int_dict,check_status
+from octopus.helper import _to_string_list, _to_float_dict, _to_int_dict, check_status
 from octopus.connectors.kaggleconnector import KaggleConnector
 from octopus.connectors.wandbconnector import WandbConnector
 from octopus.fixedhandlers.checkpointhandler import CheckpointHandler
@@ -150,7 +150,7 @@ class Octopus:
         # load phases
         self.training = Training(self.train_loader, self.loss_func, self.devicehandler)
         self.evaluation = Evaluation(self.val_loader, self.loss_func, self.devicehandler, self.ctcdecodehandler)
-        self.testing = Testing(self.test_loader, self.devicehandler,self.ctcdecodehandler)
+        self.testing = Testing(self.test_loader, self.devicehandler, self.ctcdecodehandler)
         logging.info('after loading phases')
         check_status()
         logging.info('Pipeline components are initialized.')
@@ -402,13 +402,16 @@ def initialize_variable_handlers(config):
 
     if 'LSTM' in config['model']['model_type']:
         modelhandler = LstmHandler(config['model']['model_type'],
-                                   config['model'].getint('input_size'),
+                                   config['model'].getint('lstm_input_size'),
                                    config['model'].getint('hidden_size'),
                                    config['model'].getint('num_layers'),
                                    config['model'].getint('output_size'),
                                    config['model'].getboolean('bidirectional'),
                                    config['model'].getfloat('dropout'),
-                                   conv_dict)
+                                   conv_dict,
+                                   config['model'].getint('lin1_output_size'),
+                                   config['model'].getfloat('lin1_dropout')
+                                   )
 
     else:
         modelhandler = None
