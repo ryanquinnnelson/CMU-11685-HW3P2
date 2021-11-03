@@ -1,5 +1,5 @@
 [DEFAULT]
-run_name = CnnLSTM-Run-01
+run_name = CnnLSTM-Run-12
 
 
 
@@ -37,7 +37,7 @@ tags = octopus,LTSM,CNN
 [stats]
 comparison_metric=avg_distance
 comparison_best_is_max=False
-comparison_patience=40
+comparison_patience=10
 val_metric_name=avg_distance
 
 
@@ -65,7 +65,7 @@ alpha=0
 beta=0
 cutoff_top_n=40
 cutoff_prob=1.0
-beam_width=1
+beam_width=20
 blank_id=0
 log_probs_input=True
 
@@ -83,10 +83,10 @@ model_type=CnnLSTM
 conv_kwargs=in_channels=40,out_channels=128,kernel_size=3,stride=1,padding=1,dilation=1
 input_size=128
 hidden_size=256
-num_layers=1
+num_layers=5
 output_size=42
-bidirectional=False
-dropout=0.0
+bidirectional=True
+dropout=0.3
 
 
 
@@ -99,7 +99,7 @@ checkpoint_file = None
 
 
 [hyperparameters]
-num_epochs = 2
+num_epochs = 30
 criterion_type=CTCLoss
 optimizer_type=Adam
 optimizer_kwargs=lr=0.002,weight_decay=0.000005
