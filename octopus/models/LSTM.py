@@ -251,6 +251,9 @@ class CnnLSTM(nn.Module):
         self.lin2 = nn.Linear(linear1_output_size, output_size)
         nn.init.xavier_uniform_(self.lin2.weight)
 
+        # softmax layer
+        self.logsoftmax = nn.LogSoftmax(dim=2)
+
     def forward(self, x, lengths_x, i):
         """
 
@@ -332,7 +335,7 @@ class CnnLSTM(nn.Module):
         if i == 0:
             logging.info(f'x_linear2:{x_linear2.shape}')
 
-        out_softmax = nn.functional.log_softmax(x_linear2, dim=2)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
+        out_softmax = self.logsoftmax(x_linear2)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
         if i == 0:
             logging.info(f'out_softmax:{out_softmax.shape}')
 

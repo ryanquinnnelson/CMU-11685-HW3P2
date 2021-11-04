@@ -279,6 +279,7 @@ def initialize_connectors(config):
     hyper_dict = dict(config['hyperparameters'])
     hyper_dict.update(dict(config['model']))
     hyper_dict.update(dict(config['dataloader']))
+    hyper_dict.update(dict(config['CTCDecode']))
     wandbconnector = WandbConnector(config['wandb']['wandb_dir'],
                                     config['wandb']['entity'],
                                     config['DEFAULT']['run_name'],
