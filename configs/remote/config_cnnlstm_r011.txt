@@ -65,7 +65,7 @@ alpha=0
 beta=0
 cutoff_top_n=40
 cutoff_prob=1.0
-beam_width=10
+beam_width=1
 blank_id=0
 log_probs_input=True
 
@@ -86,7 +86,7 @@ hidden_size=256
 num_layers=5
 bidirectional=True
 dropout=0.0
-lin1_output_size=256
+lin1_output_size=128
 lin1_dropout=0.0
 output_size=42
 
