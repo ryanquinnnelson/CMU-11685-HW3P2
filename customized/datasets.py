@@ -11,24 +11,26 @@ from torch.utils.data import Dataset
 
 
 def collate_fn_trainval(batch):
-    # sort batch by decreasing sequence length
-    # batch: x=(N_TIMESTEPS x FEATURES), y=(UTTERANCE_LABEL_LENGTH,)
+    """
+
+    :param batch:  x=(N_TIMESTEPS,FEATURES),y=(UTTERANCE_LABEL_LENGTH,)
+    :return:
+    """
+    # sort batch by decreasing sequence length for efficient packing
     batch = sorted(batch, key=lambda x: len(x[0]), reverse=True)
 
     # split batch into features and target
-    batch_x = [x for x, y in batch]  # List of x Tensors, length=BATCHSIZE
+    batch_x = [x for x, y in batch]  # List of x Tensors, len(batch_x)=BATCHSIZE
     lengths_x = torch.LongTensor([len(x) for x, y in batch])
-    batch_y = [y for x, y in batch]  # List of y Tensors, length=BATCHSIZE
+    batch_y = [y for x, y in batch]  # List of y Tensors, len(batch_y)=BATCHSIZE
     lengths_y = torch.LongTensor([len(y) for x, y in batch])
 
     # Pad sequences to have the same number of rows per utterance
-    # pad_batch_x: (MAX_N_TIMESTEPS x BATCHSIZE x FEATURES)
-    batch_x = pad_sequence(batch_x, batch_first=False)  # CTCLoss expects batch second for input
+    batch_x = pad_sequence(batch_x, batch_first=True)  # (BATCHSIZE,MAX_N_TIMESTEPS,FEATURES)
 
-    # ?? do we pad and pack targets
     # Pad targets to have the same number of elements per utterance
-    # pad_batch_y: (BATCHSIZE x MAX_UTTERANCE_LABEL_LENGTH)
-    batch_y = pad_sequence(batch_y, batch_first=True)  # CTCLoss expects batch first for targets
+    # CTCLoss expects batch first for targets
+    batch_y = pad_sequence(batch_y, batch_first=True)  # (BATCHSIZE,MAX_UTTERANCE_LABEL_LENGTH)
 
     # logging.info('--collate--')
     # for i, b in enumerate(batch):
@@ -61,17 +63,21 @@ class TrainValDataset(Dataset):
 
         return x, y
 
-    # ?? why sort batch
 
-
+# ?? why sort batch
 def collate_fn_test(batch):
-    # sort batch by decreasing sequence length
+    """
+
+    :param batch: (N_TIMESTEPS,FEATURES)
+    :return:
+    """
+    # sort batch by decreasing sequence length for efficient packing
     batch = sorted(batch, key=lambda x: len(x), reverse=True)
 
     lengths_x = torch.LongTensor([len(x) for x in batch])
 
     # Pad sequences to have the same number of rows per utterance
-    batch = pad_sequence(batch, batch_first=False)
+    batch = pad_sequence(batch, batch_first=True)
 
     return batch, lengths_x
 
@@ -87,8 +93,7 @@ class TestDataset(Dataset):
     def __len__(self):
         return len(self.X)
 
-        # get row item at some index
-
+    # get row item at some index
     def __getitem__(self, index):
         x = torch.FloatTensor(self.X[index])
         return x

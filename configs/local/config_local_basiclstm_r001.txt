@@ -88,7 +88,7 @@ num_layers=5
 bidirectional=True
 dropout=0.0
 lin1_output_size=256
-lin1_dropout=0.0
+lin1_dropout=0.2
 output_size=42
 
 

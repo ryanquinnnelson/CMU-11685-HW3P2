@@ -26,7 +26,7 @@ def sample(shape, gain):
     return np.asarray(gain * q, dtype=np.float64)
 
 
-def initialize_lstm_weights(shape):
+def initialize_lstm_weight(shape):
     gain = np.sqrt(2)  # relu (default gain = 1.0)
     w = sample(shape, gain)
     return torch.FloatTensor(w)
@@ -171,7 +171,7 @@ def _init_weights(layer):
 # self.cnn_layers = nn.Sequential(OrderedDict(sequence))
 
 # self.cnn = nn.Conv1d(**conv_dict)
-# nn.init.kaiming_normal_(self.cnn.weight)
+#
 
 
 # # initialize weights
@@ -201,129 +201,144 @@ def _init_weights(layer):
 # self.linear_layers = nn.Sequential(OrderedDict(sequence))
 # self.linear_layers.apply(_init_weights)
 # self.linear = nn.Linear(hidden_size * direction, output_size)  # ??use bias=False?
-# nn.init.xavier_uniform_(self.linear.weight)  # ?? correct choice
-# TODO: could do batch normalization after linear
+
+def initialize_lstm_weights(bidirectional, num_layers, hidden_size, batchsize, device):
+    directions = 2 if bidirectional else 1
+    num_layers = num_layers
+    hidden_size = hidden_size
+    h_0 = initialize_lstm_weight((directions * num_layers, batchsize, hidden_size))
+    c_0 = initialize_lstm_weight((directions * num_layers, batchsize, hidden_size))
+
+    # move initial tensors to gpu if necessary
+    if 'cuda' in str(device):
+        h_0 = h_0.to(device=torch.device('cuda'))
+        c_0 = c_0.to(device=torch.device('cuda'))
+
+    return h_0, c_0
+
 
 class CnnLSTM(nn.Module):
     def __init__(self, lstm_input_size, hidden_size, num_layers,
-                 output_size, bidirectional, dropout, conv_dicts, lin1_output_size, lin1_dropout):
+                 output_size, bidirectional, lstm_dropout, conv_dicts, linear1_output_size, linear1_dropout):
         super(CnnLSTM, self).__init__()
 
+        # cnn layers
         self.cnn1 = nn.Conv1d(**conv_dicts[0])
-        self.cnn2 = nn.Conv1d(**conv_dicts[1])
+        nn.init.kaiming_normal_(self.cnn1.weight)
 
+        self.cnn2 = nn.Conv1d(**conv_dicts[1])
+        nn.init.kaiming_normal_(self.cnn2.weight)
+
+        # lstm layers
         self.lstm = nn.LSTM(input_size=lstm_input_size,
                             hidden_size=hidden_size,
                             num_layers=num_layers,
-                            batch_first=False,  # faster if we don't do batch first
-                            dropout=dropout,
+                            batch_first=True,
+                            dropout=lstm_dropout,
                             bidirectional=bidirectional)
 
-        # build linear layers
+        # linear layers
         direction = 2 if bidirectional else 1
+        self.lin1 = nn.Linear(hidden_size * direction, linear1_output_size)
+        nn.init.xavier_uniform_(self.lin1.weight)
 
-        # linear
-        self.lin1 = nn.Linear(hidden_size * direction, lin1_output_size)
+        if linear1_dropout > 0:
+            self.drop1 = nn.Dropout(linear1_dropout)
+        else:
+            self.drop1 = None
 
-        # activation
         self.relu1 = nn.ReLU(inplace=True)
-
-        # linear
-        self.lin2 = nn.Linear(lin1_output_size, output_size)
+        self.lin2 = nn.Linear(linear1_output_size, output_size)
+        nn.init.xavier_uniform_(self.lin2.weight)
 
     def forward(self, x, lengths_x, i):
-        # X: (N_TIMESTEPS x BATCHSIZE x FEATURES)
-        batchsize = x.shape[1]
+        """
+
+        :param x: (BATCHSIZE,N_TIMESTEPS,FEATURES)
+        :param lengths_x:
+        :param i:
+        :return:
+        """
+        # save batch size for later
+        batchsize = x.shape[0]
         if i == 0:
             logging.info(f'x:{x.shape}')
 
         # transpose to shape expected for cnn
-        x_transposed1 = torch.transpose(x, 0, 1)  # (BATCHSIZE x N_TIMESTEPS x FEATURES)
+        x_transposed1 = torch.transpose(x, 1, 2)  # (BATCHSIZE,FEATURES,N_TIMESTEPS)
         if i == 0:
-            logging.info(f'x_transposed1:{x_transposed1.shape}')
+            logging.info(f'x_transposed2:{x_transposed1.shape}')
 
-        x_transposed2 = torch.transpose(x_transposed1, 1, 2)  # (BATCHSIZE x FEATURES x N_TIMESTEPS) ??is this correct
-        if i == 0:
-            logging.info(f'x_transposed2:{x_transposed2.shape}')
-
-        out_cnn1 = self.cnn1(x_transposed2)  # (BATCHSIZE x OUT_CHANNELS x N_TIMESTEPS)
+        out_cnn1 = self.cnn1(x_transposed1)  # (BATCHSIZE,OUT_CHANNELS1,N_TIMESTEPS)
         if i == 0:
             logging.info(f'out_cnn1:{out_cnn1.shape}')
 
-        out_cnn2 = self.cnn2(out_cnn1)  # (BATCHSIZE x OUT_CHANNELS x N_TIMESTEPS)
+        out_cnn2 = self.cnn2(out_cnn1)  # (BATCHSIZE,OUT_CHANNELS2,N_TIMESTEPS)
         if i == 0:
             logging.info(f'out_cnn2:{out_cnn2.shape}')
 
-        # transpose to match expectations for lstm
-        x_transposed3 = torch.transpose(out_cnn2, 0, 1)  # (OUT_CHANNELS x BATCHSIZE x N_TIMESTEPS)
+        # transpose to match shape requirements for lstm
+        x_transposed2 = torch.transpose(out_cnn2, 1, 2)  # (BATCHSIZE,N_TIMESTEPS,OUT_CHANNELS2)
         if i == 0:
-            logging.info(f'x_transposed3:{x_transposed3.shape}')
-
-        x_transposed4 = torch.transpose(x_transposed3, 0, 2)  # (N_TIMESTEPS x BATCHSIZE x OUT_CHANNELS)
-        if i == 0:
-            logging.info(f'x_transposed4:{x_transposed4.shape}')
+            logging.info(f'x_transposed2:{x_transposed2.shape}')
 
         # pack sequence after any cnn layers
-        # packed_x: (N_TIMESTEPS x BATCHSIZE x OUT_CHANNELS)
-        x_packed = pack_padded_sequence(x_transposed4, lengths_x.cpu(), enforce_sorted=True)
+        x_packed = pack_padded_sequence(x_transposed2,  # (BATCHSIZE,N_TIMESTEPS,OUT_CHANNELS2)
+                                        lengths_x.cpu(),
+                                        enforce_sorted=True,
+                                        batch_first=True)
 
         # initialize hidden layers in LSTM
-        directions = 2 if self.lstm.bidirectional else 1
-        num_layers = self.lstm.num_layers
-        hidden_size = self.lstm.hidden_size
-        h_0 = initialize_lstm_weights((directions * num_layers, batchsize, hidden_size))
-        c_0 = initialize_lstm_weights((directions * num_layers, batchsize, hidden_size))
+        h_0, c_0 = initialize_lstm_weights(self.lstm.bidirectional, self.lstm.num_layers, self.lstm.hidden_size,
+                                           batchsize, next(self.parameters()).device)
         if i == 0:
             logging.info(f'h_0:{h_0.shape}')
 
         if i == 0:
             logging.info(f'c_0:{c_0.shape}')
 
-        # move initial tensors to gpu if necessary
+        # out_lstm: (BATCHSIZE,N_TIMESTEPS,HIDDEN_SIZE * DIRECTIONS)
+        # h_t: (DIRECTIONS * NUM_LAYERS,BATCHSIZE,HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
+        # c_t: (DIRECTIONS * NUM_LAYERS,BATCHSIZE,HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
+        out_lstm, (h_t, c_t) = self.lstm(x_packed)  # , (h_0, c_0))
         if i == 0:
-            logging.info(f'device for model is:{next(self.parameters()).device}')
-        if 'cuda' in str(next(self.parameters()).device):
-            if i == 0:
-                logging.info('move to cuda')
-            h_0 = h_0.to(device=torch.device('cuda'))
-            c_0 = c_0.to(device=torch.device('cuda'))
+            logging.info(f'h_t:{h_t.shape}')
 
-        # out: (N_TIMESTEPS x BATCHSIZE x HIDDEN_SIZE * DIRECTIONS)
-        # h_t: (DIRECTIONS x BATCHSIZE x HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
-        # c_t: (DIRECTIONS x BATCHSIZE x HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
-        out_lstm, (h_t, c_t) = self.lstm(x_packed, (h_0, c_0))
+        if i == 0:
+            logging.info(f'c_t:{c_t.shape}')
 
         # unpack sequence for use in linear layer
-        # unpacked_x: (N_TIMESTEPS x BATCHSIZE x HIDDEN_SIZE * DIRECTIONS)
+        # unpacked_x: (BATCHSIZE,N_TIMESTEPS,HIDDEN_SIZE * DIRECTIONS)
         # lengths_x: (BATCHSIZE,)
-        x_unpacked, lengths_out = pad_packed_sequence(out_lstm, batch_first=False)
+        x_unpacked, lengths_out = pad_packed_sequence(out_lstm, batch_first=True)
         if i == 0:
             logging.info(f'x_unpacked:{x_unpacked.shape}')
 
-        x_transposed5 = torch.transpose(x_unpacked, 0, 1)  # (BATCHSIZE x N_TIMESTEPS x HIDDEN_SIZE * DIRECTIONS)
-        if i == 0:
-            logging.info(f'x_transposed5:{x_transposed5.shape}')
-
-        x_linear1 = self.lin1(x_transposed5)  # (BATCHSIZE x N_TIMESTEPS x OUTPUTSIZE)
+        x_linear1 = self.lin1(x_unpacked)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
         if i == 0:
             logging.info(f'x_linear1:{x_linear1.shape}')
 
-        x_relu1 = self.relu1(x_linear1)
+        x_relu1 = self.relu1(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
         if i == 0:
             logging.info(f'x_relu1:{x_relu1.shape}')
 
-        x_linear2 = self.lin2(x_relu1)  # x: ( BATCHSIZE x N_TIMESTEPS x N_LABELS)
+        # optional dropout layer
+        if self.drop1 is not None:
+            x_relu1 = self.drop1(x_relu1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
+            if i == 0:
+                logging.info(f'drop1:{x_relu1.shape}')
+
+        x_linear2 = self.lin2(x_relu1)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
         if i == 0:
             logging.info(f'x_linear2:{x_linear2.shape}')
 
-        # dim=2 because N_LABELS is the dimension to softmax
-        out_softmax = nn.functional.log_softmax(x_linear2, dim=2)
+        out_softmax = nn.functional.log_softmax(x_linear2, dim=2)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
         if i == 0:
             logging.info(f'out_softmax:{out_softmax.shape}')
 
-        x_transposed6 = torch.transpose(out_softmax, 0, 1)  # (N_TIMESTEPS x BATCHSIZE x N_LABELS)
+        # transpose to expected shape for CTCLoss # (expects batch second for input)
+        x_transposed3 = torch.transpose(out_softmax, 0, 1)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
         if i == 0:
-            logging.info(f'x_transposed6:{x_transposed6.shape}')
+            logging.info(f'x_transposed3:{x_transposed3.shape}')
 
-        # transpose back to expected shape
-        return x_transposed6
+        return x_transposed3

@@ -66,15 +66,12 @@ class Training:
             #     check_status()
 
             # compute forward pass
-            # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
-            # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-            out = model.forward(inputs, input_lengths, i)
+            out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
             # if i == 0:
             #     logging.info('after forward pass')
             #     check_status()
 
-            # calculate validation loss
-            # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
+            # calculate loss
             loss = self.criterion_func(out, targets, input_lengths, target_lengths)
             train_loss += loss.item()
             # logging.info('--compute loss--')
@@ -167,15 +164,12 @@ class Evaluation:
                 #     check_status()
 
                 # compute forward pass
-                # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
-                # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-                out = model.forward(inputs, input_lengths, i)
+                out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
                 # if i == 0:
                 #     logging.info('after forward pass')
                 #     check_status()
 
-                # calculate validation loss
-                # targets: (N_TIMESTEPS x UTTERANCE_LABEL_LENGTH)
+                # calculate loss
                 loss = self.criterion_func(out, targets, input_lengths, target_lengths)
                 val_loss += loss.item()
                 # logging.info('--compute loss--')
@@ -193,7 +187,7 @@ class Evaluation:
                 # logging.info(f'out detached:{out.shape}')
                 beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
                 distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
-                running_distance += distance  # ?? something more for running total
+                running_distance += distance
                 # if i == 0:
                 #     logging.info('after calculating distances')
                 #     check_status()
@@ -246,7 +240,7 @@ class Testing:
 
         """
         logging.info(f'Running epoch {epoch}/{num_epochs} of testing...')
-        output = []
+        results = []
 
         ctcdecode = self.ctcdecodehandler.ctcdecoder()
 
@@ -261,15 +255,12 @@ class Testing:
                 inputs, targets = self.devicehandler.move_data_to_device(model, inputs, None)
 
                 # compute forward pass
-                # inputs: (N_TIMESTEPS x BATCHSIZE x FEATURES)
-                # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
-                out = model.forward(inputs, input_lengths, i)
+                out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
                 # capture output for mini-batch
                 out = out.cpu().detach()  # extract from gpu if necessary
 
                 # decode output
-                # out: (N_TIMESTEPS x BATCHSIZE x N_LABELS)
                 beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
 
                 # convert to strings using phoneme map (not phoneme list)
@@ -282,6 +273,6 @@ class Testing:
 
                     converted_str = convert_to_string(out_converted)
                     # logging.info(f'converted_str[{i}]:{converted_str}')
-                    output.append(converted_str)
+                    results.append(converted_str)
 
-        return output
+        return results
