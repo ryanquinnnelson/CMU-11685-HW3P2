@@ -110,7 +110,8 @@ class PhaseHandler:
 
             # stats
             end = time.time()
-            self.statshandler.collect_stats(epoch, train_loss, val_loss, val_metric, start, end)
+            lr = optimizer.state_dict()["param_groups"][0]["lr"]
+            self.statshandler.collect_stats(epoch, lr, train_loss, val_loss, val_metric, start, end)
             self.statshandler.report_stats(self.wandbconnector)
 
             # scheduler

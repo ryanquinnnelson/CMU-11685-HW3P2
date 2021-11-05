@@ -1,5 +1,5 @@
 [DEFAULT]
-run_name = CnnLSTM-Run-26
+run_name = CnnLSTM-Run-29
 
 
 
@@ -85,7 +85,7 @@ lstm_input_size=256
 hidden_size=256
 num_layers=5
 bidirectional=True
-dropout=0.0
+dropout=0.2
 lin1_output_size=42
 lin1_dropout=0.0
 output_size=42

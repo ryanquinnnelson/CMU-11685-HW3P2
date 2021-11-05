@@ -104,7 +104,7 @@ checkpoint_file = None
 num_epochs = 40
 criterion_type=CTCLoss
 optimizer_type=Adam
-optimizer_kwargs=lr=0.02,weight_decay=0.000005
+optimizer_kwargs=lr=0.002,weight_decay=0.000005
 scheduler_type=ReduceLROnPlateau
 scheduler_kwargs=factor=0.5,patience=3,mode=min,verbose=True
 scheduler_plateau_metric=val_loss
