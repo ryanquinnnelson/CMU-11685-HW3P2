@@ -226,8 +226,13 @@ class CnnLSTM(nn.Module):
         self.cnn1 = nn.Conv1d(**conv_dicts[0])
         nn.init.kaiming_normal_(self.cnn1.weight)
 
+        self.bn1 = nn.BatchNorm1d(conv_dicts[0]['out_channels'])
+        self.relu1 = nn.ReLU(inplace=True)
+
         self.cnn2 = nn.Conv1d(**conv_dicts[1])
         nn.init.kaiming_normal_(self.cnn2.weight)
+
+        self.bn2 = nn.BatchNorm1d(conv_dicts[1]['out_channels'])
 
         # lstm layers
         self.lstm = nn.LSTM(input_size=lstm_input_size,
@@ -242,14 +247,14 @@ class CnnLSTM(nn.Module):
         self.lin1 = nn.Linear(hidden_size * direction, linear1_output_size)
         nn.init.xavier_uniform_(self.lin1.weight)
 
-        if linear1_dropout > 0:
-            self.drop1 = nn.Dropout(linear1_dropout)
-        else:
-            self.drop1 = None
-
-        self.relu1 = nn.ReLU(inplace=True)
-        self.lin2 = nn.Linear(linear1_output_size, output_size)
-        nn.init.xavier_uniform_(self.lin2.weight)
+        # if linear1_dropout > 0:
+        #     self.drop1 = nn.Dropout(linear1_dropout)
+        # else:
+        #     self.drop1 = None
+        #
+        # self.relu1 = nn.ReLU(inplace=True)
+        # self.lin2 = nn.Linear(linear1_output_size, output_size)
+        # nn.init.xavier_uniform_(self.lin2.weight)
 
         # softmax layer
         self.logsoftmax = nn.LogSoftmax(dim=2)
@@ -276,9 +281,13 @@ class CnnLSTM(nn.Module):
         if i == 0:
             logging.info(f'out_cnn1:{out_cnn1.shape}')
 
+        out_cnn1 = self.bn1(out_cnn1)
+        out_cnn1 = self.relu1(out_cnn1)
+
         out_cnn2 = self.cnn2(out_cnn1)  # (BATCHSIZE,OUT_CHANNELS2,N_TIMESTEPS)
         if i == 0:
             logging.info(f'out_cnn2:{out_cnn2.shape}')
+        out_cnn2 = self.bn2(out_cnn2)
 
         # transpose to match shape requirements for lstm
         x_transposed2 = torch.transpose(out_cnn2, 1, 2)  # (BATCHSIZE,N_TIMESTEPS,OUT_CHANNELS2)
@@ -321,21 +330,21 @@ class CnnLSTM(nn.Module):
         if i == 0:
             logging.info(f'x_linear1:{x_linear1.shape}')
 
-        x_relu1 = self.relu1(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
-        if i == 0:
-            logging.info(f'x_relu1:{x_relu1.shape}')
+        # x_relu1 = self.relu1(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
+        # if i == 0:
+        #     logging.info(f'x_relu1:{x_relu1.shape}')
 
-        # optional dropout layer
-        if self.drop1 is not None:
-            x_relu1 = self.drop1(x_relu1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
-            if i == 0:
-                logging.info(f'drop1:{x_relu1.shape}')
+        # # optional dropout layer
+        # if self.drop1 is not None:
+        #     x_relu1 = self.drop1(x_relu1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
+        #     if i == 0:
+        #         logging.info(f'drop1:{x_relu1.shape}')
+        #
+        # x_linear2 = self.lin2(x_relu1)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
+        # if i == 0:
+        #     logging.info(f'x_linear2:{x_linear2.shape}')
 
-        x_linear2 = self.lin2(x_relu1)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
-        if i == 0:
-            logging.info(f'x_linear2:{x_linear2.shape}')
-
-        out_softmax = self.logsoftmax(x_linear2)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
+        out_softmax = self.logsoftmax(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
         if i == 0:
             logging.info(f'out_softmax:{out_softmax.shape}')
 

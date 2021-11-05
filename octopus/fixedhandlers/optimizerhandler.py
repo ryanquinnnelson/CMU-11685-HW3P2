@@ -39,6 +39,6 @@ class OptimizerHandler:
             opt = optim.Adam(model.parameters(), **self.optimizer_kwargs)
         elif self.optimizer_type == 'SGD':
             opt = optim.SGD(model.parameters(), **self.optimizer_kwargs)
-
         logging.info(f'Optimizer initialized:\n{opt}')
+        logging.info(f'LR={opt.state_dict()["param_groups"][0]["lr"]}') # to ensure function works during training
         return opt

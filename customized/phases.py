@@ -104,6 +104,7 @@ class Training:
 
             # update model weights
             optimizer.step()
+            logging.info(f'LR={optimizer.state_dict()["param_groups"][0]["lr"]}')
 
         # calculate average loss across all mini-batches
         train_loss /= len(self.train_loader)
