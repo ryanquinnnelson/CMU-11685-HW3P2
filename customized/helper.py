@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import torch
 
-from customized import phoneme_list as pl
+from customized import phoneme_details as pl
 from pynvml import *
 
 
@@ -24,29 +24,28 @@ def check_status():
     logging.info(f'used     : {info.used}')
 
 
-def out_to_phonemes(i, beam_results, out_lens, phoneme_list):
+def out_to_phonemes(i, beam_results, out_lens, p_map):
+    """
+
+    :param i:
+    :param beam_results:
+    :param out_lens:
+    :param p_map: phoneme map
+    :return:
+    """
     # i is the ith item in the batch, indexed from 0
     j = 0  # top jth beam, where 0 is the highest
     beam = beam_results[i][j][:out_lens[i][j]]  # (BEAM_LEN,)
     beam = beam.numpy()
 
     # convert beam indexes to phonemes
-    converted = np.array([phoneme_list[idx] for idx in beam.flatten()])  # (BEAM_LEN,)
-
-    # logging.info(f'beam:{beam}')
-    #
-    # for idx in beam.flatten()[:5]:
-    #     logging.info(f'idx:{idx}')
-    #     logging.info(f'phoneme_list:{phoneme_list[idx]}')
-    # logging.info(f'beam array:{beam.shape}')
-    # logging.info(f'beam tensor:{beam.shape}')
-    # logging.info(f'converted:{converted.shape}')
+    converted = np.array([p_map[idx] for idx in beam.flatten()])  # (BEAM_LEN,)
     return converted
 
 
-def target_to_phonemes(target, phoneme_list):
+def target_to_phonemes(target, p_map):
     target = target.numpy()
-    converted = np.array([phoneme_list[idx] for idx in target.flatten()])
+    converted = np.array([p_map[idx] for idx in target.flatten()])
     return converted
 
 

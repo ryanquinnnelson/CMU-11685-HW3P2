@@ -10,7 +10,7 @@ import logging
 import torch
 import warnings
 from customized.helper import out_to_phonemes, target_to_phonemes, convert_to_string, decode_output
-import customized.phoneme_list as pl
+import customized.phoneme_details as pl
 
 warnings.filterwarnings('ignore')
 

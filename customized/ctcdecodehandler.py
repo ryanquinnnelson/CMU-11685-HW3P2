@@ -5,7 +5,7 @@ __author__ = 'ryanquinnnelson'
 
 import logging
 import multiprocessing
-import customized.phoneme_list as pl
+import customized.phoneme_details as pl
 
 
 def get_ctcdecoder(labels, model_path, alpha, beta, cutoff_top_n, cutoff_prob, beam_width, num_processes, blank_id,
@@ -34,7 +34,7 @@ class CTCDecodeHandler:
         n_cpus = multiprocessing.cpu_count()
         logging.info(f'CPU count:{n_cpus}.')
         self.num_processes = n_cpus
-        self.labels = pl.PHONEME_LIST
+        self.labels = pl.PHONEME_MAP
 
     def ctcdecoder(self):
         return get_ctcdecoder(self.labels, self.model_path, self.alpha, self.beta, self.cutoff_top_n,
