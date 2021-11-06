@@ -53,8 +53,10 @@ def convert_to_string(converted_list):
     return ''.join(converted_list.tolist())
 
 
-def decode_output(out, ctcdecode):
-    out = torch.transpose(out, 0, 1)  # BATCHSIZE x N_TIMESTEPS x N_LABELS
+def decode_output(out, ctcdecode, i):
+    out = torch.transpose(out, 0, 1)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
+    if i == 0:
+        logging.info(f'out in decode_output:{out.shape}')
 
     # decode batch
     beam_results, beam_scores, timesteps, out_lens = ctcdecode.decode(out)
@@ -84,11 +86,11 @@ def calculate_distances(beam_results, out_lens, targets):
         distance = Levenshtein.distance(out_str, target_str)
         total_distance += distance
 
-        # logging.info(f'out_converted:{out_converted}')
-        # logging.info(f'out_str:{out_str}')
-        # logging.info(f'targets[{i}]:{targets[i]}')
-        # logging.info(f'target_converted:{target_converted}')
-        # logging.info(f'target_str:{target_str}')
-        # logging.info(f'distance:{distance}')
-
     return total_distance
+
+# logging.info(f'out_converted:{out_converted}')
+# logging.info(f'out_str:{out_str}')
+# logging.info(f'targets[{i}]:{targets[i]}')
+# logging.info(f'target_converted:{target_converted}')
+# logging.info(f'target_str:{target_str}')
+# logging.info(f'distance:{distance}')

@@ -184,8 +184,7 @@ class Evaluation:
 
                 # calculate distance between actual and desired output
                 out = out.cpu().detach()  # extract from gpu
-                # logging.info(f'out detached:{out.shape}')
-                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
+                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode, i)
                 distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
                 running_distance += distance
                 # if i == 0:
@@ -261,7 +260,7 @@ class Testing:
                 out = out.cpu().detach()  # extract from gpu if necessary
 
                 # decode output
-                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode)
+                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode, i)
 
                 # convert to strings using phoneme map (not phoneme list)
                 n = beam_results.shape[0]
@@ -276,3 +275,5 @@ class Testing:
                     results.append(converted_str)
 
         return results
+
+
