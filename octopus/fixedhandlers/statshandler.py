@@ -25,6 +25,7 @@ class StatsHandler:
         """
         logging.info('Initializing stats handler...')
         self.stats = {'epoch': [],
+                      'lr': [],
                       'runtime': [],
                       'train_loss': [],
                       'val_loss': [],
@@ -132,7 +133,7 @@ class StatsHandler:
         wandbconnector.log_stats(epoch_stats_dict)
         logging.info(f'stats:{epoch_stats_dict}')
 
-    def collect_stats(self, lr, epoch, train_loss, val_loss, val_metric, start, end):
+    def collect_stats(self, epoch, lr, train_loss, val_loss, val_metric, start, end):
         """
         Collect and store stats for a given epoch of model training.
         Args:
