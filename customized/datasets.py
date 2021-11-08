@@ -3,10 +3,8 @@ Contains all Dataset objects customized to the data.
 """
 __author__ = 'ryanquinnnelson'
 
-import logging
-
 import torch
-from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
 
@@ -31,15 +29,6 @@ def collate_fn_trainval(batch):
     # Pad targets to have the same number of elements per utterance
     # CTCLoss expects batch first for targets
     batch_y = pad_sequence(batch_y, batch_first=True)  # (BATCHSIZE,MAX_UTTERANCE_LABEL_LENGTH)
-
-    # logging.info('--collate--')
-    # for i, b in enumerate(batch):
-    #     logging.info(f'x_{i}:{b[0].shape}, y_{i}:{b[1].shape}')
-    # logging.info(f'lengths_x:{lengths_x},lengths_y:{lengths_y}')
-    # logging.info(f'pad_batch_x:{pad_batch_x.shape}')
-    # logging.info(f'pad_batch_y:{pad_batch_y.shape}')
-    # logging.info('packed_batch_x')
-    # logging.info('')
 
     return batch_x, batch_y, lengths_x, lengths_y
 

@@ -61,29 +61,21 @@ class Training:
 
             inputs, targets = self.devicehandler.move_data_to_device(model, inputs, targets)
             input_lengths, target_lengths = self.devicehandler.move_data_to_device(model, input_lengths, target_lengths)
-            # if i == 0:
-            #     logging.info('after loading data')
-            #     check_status()
 
             # compute forward pass
-            out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
-            # if i == 0:
-            #     logging.info('after forward pass')
-            #     check_status()
+            out,lengths_out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
             # calculate loss
-            loss = self.criterion_func(out, targets, input_lengths, target_lengths)
+            loss = self.criterion_func(out, targets, lengths_out, target_lengths)
             train_loss += loss.item()
             # logging.info('--compute loss--')
             # logging.info(f'targets:{targets.shape}')
-            # logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}')
+            # if i == 0:
+            #     logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}')
+            #     logging.info(f'lengths_out:{lengths_out},{lengths_out.shape}')
             # logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
             # logging.info(f'loss:{loss.item()}')
             # logging.info('')
-
-            # if i == 0:
-            #     logging.info('after calculating loss')
-            #     check_status()
 
             # delete mini-batch data from device
             del inputs
@@ -91,16 +83,8 @@ class Training:
             del input_lengths
             del target_lengths
 
-            # if i == 0:
-            #     logging.info('after deleting data')
-            #     check_status()
-
             # compute backward pass
             loss.backward()
-
-            # if i == 0:
-            #     logging.info('after backward pass')
-            #     check_status()
 
             # update model weights
             optimizer.step()
@@ -159,47 +143,32 @@ class Evaluation:
                 input_lengths, target_lengths = self.devicehandler.move_data_to_device(model, input_lengths,
                                                                                        target_lengths)
 
-                # if i == 0:
-                #     logging.info('after loading data')
-                #     check_status()
-
                 # compute forward pass
-                out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
-                # if i == 0:
-                #     logging.info('after forward pass')
-                #     check_status()
+                out,lengths_out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
                 # calculate loss
-                loss = self.criterion_func(out, targets, input_lengths, target_lengths)
+                loss = self.criterion_func(out, targets, lengths_out, target_lengths)
                 val_loss += loss.item()
                 # logging.info('--compute loss--')
                 # logging.info(f'targets:{targets.shape}')
                 # logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}')
                 # logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
                 # logging.info(f'loss:{loss.item()}')
-                # logging.info('')
-                # if i == 0:
-                #     logging.info('after calculating loss')
-                #     check_status()
 
                 # calculate distance between actual and desired output
+                # logging.info(f'one output vector:{out[0][0]}')
+
                 out = out.cpu().detach()  # extract from gpu
-                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode, i)
-                distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
+
+                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode, lengths_out, i)
+                distance = calculate_distances(beam_results, out_lens, targets.cpu().detach(), i, out)
                 running_distance += distance
-                # if i == 0:
-                #     logging.info('after calculating distances')
-                #     check_status()
 
                 # delete mini-batch from device
                 del inputs
                 del targets
                 del target_lengths
                 del input_lengths
-
-                # if i == 0:
-                #     logging.info('after deleting data')
-                #     check_status()
 
             # calculate evaluation metrics
             val_loss /= len(self.val_loader)  # average per mini-batch
@@ -240,7 +209,6 @@ class Testing:
         """
         logging.info(f'Running epoch {epoch}/{num_epochs} of testing...')
         results = []
-
         ctcdecode = self.ctcdecodehandler.ctcdecoder()
 
         with torch.no_grad():  # deactivate autograd engine to improve efficiency
@@ -254,24 +222,20 @@ class Testing:
                 inputs, targets = self.devicehandler.move_data_to_device(model, inputs, None)
 
                 # compute forward pass
-                out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
+                out,lengths_out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
                 # capture output for mini-batch
                 out = out.cpu().detach()  # extract from gpu if necessary
 
                 # decode output
-                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode, i)
+                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode, input_lengths, i)
 
                 # convert to strings using phoneme map (not phoneme list)
                 n = beam_results.shape[0]
-                # logging.info(f'Converting {n_batches} beam results to phonemes...')
 
                 for i in range(n):
                     out_converted = out_to_phonemes(i, beam_results, out_lens, pl.PHONEME_MAP)
-                    # logging.info(f'out_converted[{i}]:{out_converted}')
-
                     converted_str = convert_to_string(out_converted)
-                    # logging.info(f'converted_str[{i}]:{converted_str}')
                     results.append(converted_str)
 
         return results

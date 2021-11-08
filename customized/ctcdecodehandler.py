@@ -11,8 +11,14 @@ import customized.phoneme_details as pl
 def get_ctcdecoder(labels, model_path, alpha, beta, cutoff_top_n, cutoff_prob, beam_width, num_processes, blank_id,
                    log_probs_input):
     import ctcdecode
-    d = ctcdecode.CTCBeamDecoder(labels, model_path, alpha, beta, cutoff_top_n, cutoff_prob, beam_width, num_processes,
-                                 blank_id, log_probs_input)
+
+    vals = [labels, model_path, alpha, beta, cutoff_top_n, cutoff_prob, beam_width, num_processes, blank_id,
+                   log_probs_input]
+    logging.info(f'decoder values:{vals}')
+    d = ctcdecode.CTCBeamDecoder(labels=labels, model_path=model_path, alpha=alpha, beta=beta,
+                                 cutoff_top_n=cutoff_top_n, cutoff_prob=cutoff_prob, beam_width=beam_width,
+                                 num_processes=num_processes,
+                                 blank_id=blank_id, log_probs_input=log_probs_input)
     return d
 
 

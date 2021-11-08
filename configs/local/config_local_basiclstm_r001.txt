@@ -76,7 +76,7 @@ log_probs_input=True
 [dataloader]
 num_workers=8
 pin_memory=True
-batch_size=64
+batch_size=2
 
 
 [model]

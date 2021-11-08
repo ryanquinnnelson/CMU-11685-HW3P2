@@ -13,6 +13,15 @@ from collections import OrderedDict
 import numpy as np
 
 
+# # debugging by setting random seed
+# torch.manual_seed(0)
+#
+# import random
+# random.seed(0)
+#
+# np.random.seed(0)
+
+
 # source for orthogonal initializer
 # https://github.com/Lasagne/Lasagne/blob/master/lasagne/init.py
 # with minor changes
@@ -312,7 +321,7 @@ class CnnLSTM(nn.Module):
         # out_lstm: (BATCHSIZE,N_TIMESTEPS,HIDDEN_SIZE * DIRECTIONS)
         # h_t: (DIRECTIONS * NUM_LAYERS,BATCHSIZE,HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
         # c_t: (DIRECTIONS * NUM_LAYERS,BATCHSIZE,HIDDEN_SIZE)  DIRECTIONS=2 for bidirectional, 1 otherwise
-        out_lstm, (h_t, c_t) = self.lstm(x_packed)  # , (h_0, c_0))
+        out_lstm, (h_t, c_t) = self.lstm(x_packed, (h_0, c_0))
         if i == 0:
             logging.info(f'h_t:{h_t.shape}')
 
@@ -353,4 +362,4 @@ class CnnLSTM(nn.Module):
         if i == 0:
             logging.info(f'x_transposed3:{x_transposed3.shape}')
 
-        return x_transposed3
+        return x_transposed3,lengths_out
