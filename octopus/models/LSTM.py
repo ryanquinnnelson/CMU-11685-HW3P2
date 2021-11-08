@@ -257,15 +257,15 @@ class CnnLSTM(nn.Module):
         self.lin1 = nn.Linear(hidden_size * direction, linear1_output_size)
         nn.init.xavier_uniform_(self.lin1.weight)
 
-        if linear1_dropout > 0:
-            self.drop1 = nn.Dropout(linear1_dropout)
-        else:
-            self.drop1 = None
+        # if linear1_dropout > 0:
+        #     self.drop1 = nn.Dropout(linear1_dropout)
+        # else:
+        #     self.drop1 = None
+        #
+        # self.relu3 = nn.ReLU(inplace=True)
 
-        self.relu3 = nn.ReLU(inplace=True)
-
-        self.lin2 = nn.Linear(linear1_output_size, output_size)
-        nn.init.xavier_uniform_(self.lin2.weight)
+        # self.lin2 = nn.Linear(linear1_output_size, output_size)
+        # nn.init.xavier_uniform_(self.lin2.weight)
 
         # softmax layer
         self.logsoftmax = nn.LogSoftmax(dim=2)
@@ -348,21 +348,21 @@ class CnnLSTM(nn.Module):
         if i == 0:
             logging.info(f'x_linear1:{x_linear1.shape}')
 
-        # optional dropout layer
-        if self.drop1 is not None:
-            x_linear1 = self.drop1(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
-            if i == 0:
-                logging.info(f'drop1:{x_linear1.shape}')
+        # # optional dropout layer
+        # if self.drop1 is not None:
+        #     x_linear1 = self.drop1(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
+        #     if i == 0:
+        #         logging.info(f'drop1:{x_linear1.shape}')
+        #
+        # x_relu3 = self.relu3(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
+        # if i == 0:
+        #     logging.info(f'x_relu3:{x_relu3.shape}')
+        #
+        # x_linear2 = self.lin2(x_relu3)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
+        # if i == 0:
+        #     logging.info(f'x_linear2:{x_linear2.shape}')
 
-        x_relu3 = self.relu3(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
-        if i == 0:
-            logging.info(f'x_relu3:{x_relu3.shape}')
-
-        x_linear2 = self.lin2(x_relu3)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
-        if i == 0:
-            logging.info(f'x_linear2:{x_linear2.shape}')
-
-        out_softmax = self.logsoftmax(x_linear2)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
+        out_softmax = self.logsoftmax(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
         if i == 0:
             logging.info(f'out_softmax:{out_softmax.shape}')
 
@@ -371,4 +371,4 @@ class CnnLSTM(nn.Module):
         if i == 0:
             logging.info(f'x_transposed3:{x_transposed3.shape}')
 
-        return x_transposed3,lengths_out
+        return x_transposed3, lengths_out
