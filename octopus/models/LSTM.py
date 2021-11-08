@@ -242,6 +242,7 @@ class CnnLSTM(nn.Module):
         nn.init.kaiming_normal_(self.cnn2.weight)
 
         self.bn2 = nn.BatchNorm1d(conv_dicts[1]['out_channels'])
+        self.relu2 = nn.ReLU(inplace=True)
 
         # lstm layers
         self.lstm = nn.LSTM(input_size=lstm_input_size,
@@ -256,19 +257,20 @@ class CnnLSTM(nn.Module):
         self.lin1 = nn.Linear(hidden_size * direction, linear1_output_size)
         nn.init.xavier_uniform_(self.lin1.weight)
 
-        # if linear1_dropout > 0:
-        #     self.drop1 = nn.Dropout(linear1_dropout)
-        # else:
-        #     self.drop1 = None
-        #
-        # self.relu1 = nn.ReLU(inplace=True)
-        # self.lin2 = nn.Linear(linear1_output_size, output_size)
-        # nn.init.xavier_uniform_(self.lin2.weight)
+        if linear1_dropout > 0:
+            self.drop1 = nn.Dropout(linear1_dropout)
+        else:
+            self.drop1 = None
+
+        self.relu3 = nn.ReLU(inplace=True)
+
+        self.lin2 = nn.Linear(linear1_output_size, output_size)
+        nn.init.xavier_uniform_(self.lin2.weight)
 
         # softmax layer
         self.logsoftmax = nn.LogSoftmax(dim=2)
 
-    def forward(self, x, lengths_x, i):
+    def forward(self, x, lengths_x, i, phase):
         """
 
         :param x: (BATCHSIZE,N_TIMESTEPS,FEATURES)
@@ -297,6 +299,7 @@ class CnnLSTM(nn.Module):
         if i == 0:
             logging.info(f'out_cnn2:{out_cnn2.shape}')
         out_cnn2 = self.bn2(out_cnn2)
+        out_cnn2 = self.relu2(out_cnn2)
 
         # transpose to match shape requirements for lstm
         x_transposed2 = torch.transpose(out_cnn2, 1, 2)  # (BATCHSIZE,N_TIMESTEPS,OUT_CHANNELS2)
@@ -304,10 +307,16 @@ class CnnLSTM(nn.Module):
             logging.info(f'x_transposed2:{x_transposed2.shape}')
 
         # pack sequence after any cnn layers
-        x_packed = pack_padded_sequence(x_transposed2,  # (BATCHSIZE,N_TIMESTEPS,OUT_CHANNELS2)
-                                        lengths_x.cpu(),
-                                        enforce_sorted=True,
-                                        batch_first=True)
+        if phase == 'testing':
+            x_packed = pack_padded_sequence(x_transposed2,  # (BATCHSIZE,N_TIMESTEPS,OUT_CHANNELS2)
+                                            lengths_x.cpu(),
+                                            enforce_sorted=False,  # test batch isn't sorted
+                                            batch_first=True)
+        else:
+            x_packed = pack_padded_sequence(x_transposed2,  # (BATCHSIZE,N_TIMESTEPS,OUT_CHANNELS2)
+                                            lengths_x.cpu(),
+                                            enforce_sorted=True,
+                                            batch_first=True)
 
         # initialize hidden layers in LSTM
         h_0, c_0 = initialize_lstm_weights(self.lstm.bidirectional, self.lstm.num_layers, self.lstm.hidden_size,
@@ -339,19 +348,19 @@ class CnnLSTM(nn.Module):
         if i == 0:
             logging.info(f'x_linear1:{x_linear1.shape}')
 
-        # x_relu1 = self.relu1(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
-        # if i == 0:
-        #     logging.info(f'x_relu1:{x_relu1.shape}')
+        # optional dropout layer
+        if self.drop1 is not None:
+            x_linear1 = self.drop1(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
+            if i == 0:
+                logging.info(f'drop1:{x_linear1.shape}')
 
-        # # optional dropout layer
-        # if self.drop1 is not None:
-        #     x_relu1 = self.drop1(x_relu1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
-        #     if i == 0:
-        #         logging.info(f'drop1:{x_relu1.shape}')
-        #
-        # x_linear2 = self.lin2(x_relu1)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
-        # if i == 0:
-        #     logging.info(f'x_linear2:{x_linear2.shape}')
+        x_relu3 = self.relu3(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,LINEAR1_OUTPUT_SIZE)
+        if i == 0:
+            logging.info(f'x_relu3:{x_relu3.shape}')
+
+        x_linear2 = self.lin2(x_relu3)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
+        if i == 0:
+            logging.info(f'x_linear2:{x_linear2.shape}')
 
         out_softmax = self.logsoftmax(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
         if i == 0:

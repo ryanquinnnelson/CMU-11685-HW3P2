@@ -48,6 +48,7 @@ class Training:
 
         """
         logging.info(f'Running epoch {epoch}/{num_epochs} of training...')
+        phase = 'training'
         train_loss = 0
 
         # Set model in 'Training mode'
@@ -63,7 +64,7 @@ class Training:
             input_lengths, target_lengths = self.devicehandler.move_data_to_device(model, input_lengths, target_lengths)
 
             # compute forward pass
-            out,lengths_out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
+            out,lengths_out = model.forward(inputs, input_lengths, i, phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
             # calculate loss
             loss = self.criterion_func(out, targets, lengths_out, target_lengths)
@@ -128,6 +129,7 @@ class Evaluation:
 
         """
         logging.info(f'Running epoch {epoch}/{num_epochs} of evaluation...')
+        phase = 'validation'
         val_loss = 0
         running_distance = 0
         ctcdecode = self.ctcdecodehandler.ctcdecoder()
@@ -144,7 +146,7 @@ class Evaluation:
                                                                                        target_lengths)
 
                 # compute forward pass
-                out,lengths_out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
+                out,lengths_out = model.forward(inputs, input_lengths, i, phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
                 # calculate loss
                 loss = self.criterion_func(out, targets, lengths_out, target_lengths)
@@ -208,6 +210,7 @@ class Testing:
 
         """
         logging.info(f'Running epoch {epoch}/{num_epochs} of testing...')
+        phase = 'testing'
         results = []
         ctcdecode = self.ctcdecodehandler.ctcdecoder()
 
@@ -222,7 +225,7 @@ class Testing:
                 inputs, targets = self.devicehandler.move_data_to_device(model, inputs, None)
 
                 # compute forward pass
-                out,lengths_out = model.forward(inputs, input_lengths, i)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
+                out,lengths_out = model.forward(inputs, input_lengths, i,phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
                 # capture output for mini-batch
                 out = out.cpu().detach()  # extract from gpu if necessary

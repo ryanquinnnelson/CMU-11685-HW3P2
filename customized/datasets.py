@@ -60,9 +60,6 @@ def collate_fn_test(batch):
     :param batch: (N_TIMESTEPS,FEATURES)
     :return:
     """
-    # sort batch by decreasing sequence length for efficient packing
-    batch = sorted(batch, key=lambda x: len(x), reverse=True)
-
     lengths_x = torch.LongTensor([len(x) for x in batch])
 
     # Pad sequences to have the same number of rows per utterance
