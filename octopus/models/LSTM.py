@@ -362,7 +362,7 @@ class CnnLSTM(nn.Module):
         if i == 0:
             logging.info(f'x_linear2:{x_linear2.shape}')
 
-        out_softmax = self.logsoftmax(x_linear1)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
+        out_softmax = self.logsoftmax(x_linear2)  # (BATCHSIZE,N_TIMESTEPS,N_LABELS)
         if i == 0:
             logging.info(f'out_softmax:{out_softmax.shape}')
 

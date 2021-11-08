@@ -131,11 +131,11 @@ class Octopus:
         logging.info('octopus is initializing pipeline components...')
         # initialize model
         self.model = self.modelhandler.get_model()
-        logging.info('after initializing model')
+        # logging.info('after initializing model')
         # check_status()
         self.model = self.devicehandler.move_model_to_device(self.model)  # move before initializing optimizer - Note 1
         self.wandbconnector.watch(self.model)
-        logging.info('after loading model')
+        # logging.info('after loading model')
         # check_status()
 
         # initialize model components
@@ -151,7 +151,7 @@ class Octopus:
         self.training = Training(self.train_loader, self.loss_func, self.devicehandler)
         self.evaluation = Evaluation(self.val_loader, self.loss_func, self.devicehandler, self.ctcdecodehandler)
         self.testing = Testing(self.test_loader, self.devicehandler, self.ctcdecodehandler)
-        logging.info('after loading phases')
+        # logging.info('after loading phases')
         # check_status()
         logging.info('Pipeline components are initialized.')
 
