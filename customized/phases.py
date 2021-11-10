@@ -63,7 +63,7 @@ class Training:
             input_lengths, target_lengths = self.devicehandler.move_data_to_device(model, input_lengths, target_lengths)
 
             # compute forward pass
-            out, lengths_out = model.forward(inputs, input_lengths, i, phase)  # out=(N_TIMESTEPS,BATCHSIZE,N_LABELS)
+            out, lengths_out = model.forward(inputs, input_lengths, phase)  # out=(N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
             # calculate loss
             loss = self.criterion_func(out, targets, lengths_out, target_lengths)
@@ -137,7 +137,7 @@ class Evaluation:
                                                                                        target_lengths)
 
                 # compute forward pass
-                out, lengths_out = model.forward(inputs, input_lengths, i, phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
+                out, lengths_out = model.forward(inputs, input_lengths, phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
                 # calculate loss
                 loss = self.criterion_func(out, targets, lengths_out, target_lengths)
@@ -208,7 +208,7 @@ class Testing:
                 inputs, targets = self.devicehandler.move_data_to_device(model, inputs, None)
 
                 # compute forward pass
-                out, lengths_out = model.forward(inputs, input_lengths, i, phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
+                out, lengths_out = model.forward(inputs, input_lengths, phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
                 # capture output for mini-batch
                 out = out.cpu().detach()  # extract from gpu if necessary

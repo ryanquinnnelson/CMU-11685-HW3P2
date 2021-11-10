@@ -44,8 +44,29 @@ def _convert_dict_to_dicts(d):
 
 
 class LstmHandler:
+    """
+    Defines object to handle LSTM model initialization.
+
+    """
+
     def __init__(self, model_type, lstm_input_size, hidden_size, num_layers,
                  output_size, bidirectional, dropout, conv_dict, lin1_output_size, lin1_dropout):
+        """
+        Initialize LstmHandler.
+
+        :param model_type (str): Type of LSTM model. Allows BasicLSTM and CnnLSTM.
+        :param lstm_input_size (int): Dimension of features being input into the LSTM portion of the model.
+        :param hidden_size (int): Dimension of each hidden layer in the LSTM model.
+        :param num_layers (int): Number of LSTM layers in LSTM portion of the model.
+        :param output_size (int): The number of labels in the feature dimension of linear layer output.
+        :param bidirectional (Boolean): True if LSTM is bidirectional. False otherwise.
+        :param dropout (float): The percent of node dropout in the LSTM model.
+        :param conv_dict (Dict): A dictionary containing the parameters for each cnn layer.
+        :param lin1_output_size (int): The number of labels in the feature dimension of the first linear layer if there are multiple linear layers.
+        :param lin1_dropout (float): The percent of node dropout in between linear layers in the model if there are multiple linear layers.
+        """
+        logging.info('Initializing LSTM handler...')
+
         self.model_type = model_type
         self.lstm_input_size = lstm_input_size
         self.hidden_size = hidden_size
@@ -56,9 +77,13 @@ class LstmHandler:
         self.conv_dicts = _convert_dict_to_dicts(conv_dict)
         self.lin1_output_size = lin1_output_size
         self.lin1_dropout = lin1_dropout
-        logging.info('Initializing LSTM handler...')
 
     def get_model(self):
+        """
+        Initialize the LSTM model based on model_type.
+
+        :return (nn.Module): LSTM model
+        """
         model = None
 
         if self.model_type == 'BasicLSTM':

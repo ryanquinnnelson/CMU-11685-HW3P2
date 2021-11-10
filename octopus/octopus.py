@@ -11,7 +11,7 @@ import sys
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"  # better error tracking from gpu
 
 # reusable local modules
-from octopus.helper import _to_string_list, _to_float_dict, _to_int_dict, check_status
+from octopus.helper import _to_string_list, _to_float_dict, _to_int_dict
 from octopus.connectors.kaggleconnector import KaggleConnector
 from octopus.connectors.wandbconnector import WandbConnector
 from octopus.fixedhandlers.checkpointhandler import CheckpointHandler
@@ -42,7 +42,7 @@ class Octopus:
 
     def __init__(self, config, config_file):
         """
-        Initializes octopus object. Sets up logging, initializes all connectors and handlers.
+        Initialize octopus object. Set up logging, initialize all connectors and handlers.
         Args:
             config (ConfigParser): contains the configuration for this run
             config_file (str): fully qualified path to the configuration file
@@ -78,16 +78,21 @@ class Octopus:
         logging.info('octopus initialization is complete.')
 
     def install_packages(self):
+        """
+        Perform installation of all packages via pip.
+        :return:
+        """
         logging.info('octopus is installing necessary packages...')
         self.piphandler.install_packages()
         logging.info('Package installation is complete.')
 
     def setup_environment(self):
         """
-        Performs all tasks necessary to prepare the environment for training. Installs and logs into wandb, installs
-        kaggle (if necessary), deletes previous version of the checkpoint directory if necessary and creates checkpoint
-        directory, creates output directory, determines whether device is cpu or cuda (gpu), and sets DataLoader
+        Perform all tasks necessary to prepare the environment for training. Set up and log into wandb, set up
+        kaggle (if necessary), delete previous version of the checkpoint directory if necessary and create checkpoint
+        directory, create output directory, determine whether device is cpu or cuda (gpu), and set DataLoader
         arguments based on device.
+
         Returns:None
         """
 
@@ -127,22 +132,23 @@ class Octopus:
             logging.info(f'octopus expects data to be available in {self.inputhandler.data_dir}.')
 
     def initialize_pipeline_components(self):
+        """
+        Initialize all components of the deep learning pipeline, including model, loss function, optimizer, scheduler,
+        dataloaders, and training phases.
+
+        :return: None
+        """
 
         logging.info('octopus is initializing pipeline components...')
         # initialize model
         self.model = self.modelhandler.get_model()
-        # logging.info('after initializing model')
-        # check_status()
         self.model = self.devicehandler.move_model_to_device(self.model)  # move before initializing optimizer - Note 1
         self.wandbconnector.watch(self.model)
-        # logging.info('after loading model')
-        # check_status()
 
         # initialize model components
         self.loss_func = self.criterionhandler.get_loss_function()
         self.optimizer = self.optimizerhandler.get_optimizer(self.model)
         self.scheduler = self.schedulerhandler.get_scheduler(self.optimizer)
-        # ?? should I move criterion to device too?
 
         # load data
         self.train_loader, self.val_loader, self.test_loader = self.dataloaderhandler.load(self.inputhandler)
@@ -151,15 +157,12 @@ class Octopus:
         self.training = Training(self.train_loader, self.loss_func, self.devicehandler)
         self.evaluation = Evaluation(self.val_loader, self.loss_func, self.devicehandler, self.ctcdecodehandler)
         self.testing = Testing(self.test_loader, self.devicehandler, self.ctcdecodehandler)
-        # logging.info('after loading phases')
-        # check_status()
+
         logging.info('Pipeline components are initialized.')
 
     def run_pipeline(self):
         """
-        Runs the deep learning pipeline. Builds model, moves model to device (if GPU), setups up wandb to watch the
-        model, initializes loss function, optimizer, and scheduler, builds training, validation, and test DataLoaders,
-        loads Training, Evaluation, and Testing phases, then trains model for all epochs.
+        Run training, validation, and test phases of training for all epochs.
 
         Note 1:
         Reason behind moving model to device first:
@@ -179,7 +182,8 @@ class Octopus:
 
     def cleanup(self):
         """
-         Performs any cleanup steps. Stops wandb logging for the current run.
+        Perform any cleanup steps. Stop wandb logging for the current run to enable multiple runs within a single
+        execution of run_octopus.py.
         Returns:None
 
         """
@@ -230,7 +234,7 @@ def _setup_logging(debug_path, run_name):
 
 def _draw_logo():
     """
-    Writes octopus logo to the log.
+    Write octopus logo to the log.
     Returns:None
 
     """
@@ -257,7 +261,7 @@ def _draw_logo():
 
 def initialize_connectors(config):
     """
-    Initializes classes that manage connections to external tools like kaggle and wandb.
+    Initialize classes that manage connections to external tools like kaggle and wandb.
     Args:
         config (ConfigParser): contains the configuration for this run
 
@@ -293,7 +297,7 @@ def initialize_connectors(config):
 
 def initialize_fixed_handlers(config, wandbconnector):
     """
-    Initializes all object handlers that remain the same regardless of changes to data.
+    Initialize all object handlers that remain the same regardless of changes to data.
     Args:
         config (ConfigParser): contains the configuration for this run
         wandbconnector (WandbConnector): object that manages connection to wandb
@@ -370,7 +374,7 @@ def initialize_fixed_handlers(config, wandbconnector):
 # TODO add alternative input and model handlers for MLP
 def initialize_variable_handlers(config):
     """
-    Initializes all object handlers that may change depending on the data and model configurations.
+    Initialize all object handlers that may change depending on the data and model configurations.
 
     Args:
         config  (ConfigParser): contains the configuration for this run
