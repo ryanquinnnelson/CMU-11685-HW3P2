@@ -1,5 +1,5 @@
 """
-Runs octopus.
+Wrapper script to run octopus.
 """
 __author__ = 'ryanquinnnelson'
 

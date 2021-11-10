@@ -1,15 +1,14 @@
 """
-All things related to training phases.
+All things related to model training phases.
 """
-
-import numpy as np
-
-from customized.helper import decode_output, calculate_distances, check_status
+__author__ = 'ryanquinnnelson'
 
 import logging
-import torch
 import warnings
-from customized.helper import out_to_phonemes, target_to_phonemes, convert_to_string, decode_output
+
+import torch
+
+from customized.helper import out_to_phonemes, convert_to_string, decode_output, calculate_distances
 import customized.phoneme_details as pl
 
 warnings.filterwarnings('ignore')
@@ -64,19 +63,11 @@ class Training:
             input_lengths, target_lengths = self.devicehandler.move_data_to_device(model, input_lengths, target_lengths)
 
             # compute forward pass
-            out,lengths_out = model.forward(inputs, input_lengths, i, phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
+            out, lengths_out = model.forward(inputs, input_lengths, i, phase)  # out=(N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
             # calculate loss
             loss = self.criterion_func(out, targets, lengths_out, target_lengths)
             train_loss += loss.item()
-            # logging.info('--compute loss--')
-            # logging.info(f'targets:{targets.shape}')
-            # if i == 0:
-            #     logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}')
-            #     logging.info(f'lengths_out:{lengths_out},{lengths_out.shape}')
-            # logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
-            # logging.info(f'loss:{loss.item()}')
-            # logging.info('')
 
             # delete mini-batch data from device
             del inputs
@@ -146,24 +137,16 @@ class Evaluation:
                                                                                        target_lengths)
 
                 # compute forward pass
-                out,lengths_out = model.forward(inputs, input_lengths, i, phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
+                out, lengths_out = model.forward(inputs, input_lengths, i, phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
                 # calculate loss
                 loss = self.criterion_func(out, targets, lengths_out, target_lengths)
                 val_loss += loss.item()
-                # logging.info('--compute loss--')
-                # logging.info(f'targets:{targets.shape}')
-                # logging.info(f'input_lengths:{input_lengths},{input_lengths.shape}')
-                # logging.info(f'target_lengths:{target_lengths},{target_lengths.shape}')
-                # logging.info(f'loss:{loss.item()}')
 
                 # calculate distance between actual and desired output
-                # logging.info(f'one output vector:{out[0][0]}')
-
                 out = out.cpu().detach()  # extract from gpu
-
-                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode, lengths_out, i)
-                distance = calculate_distances(beam_results, out_lens, targets.cpu().detach(), i, out)
+                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode, lengths_out)
+                distance = calculate_distances(beam_results, out_lens, targets.cpu().detach())
                 running_distance += distance
 
                 # delete mini-batch from device
@@ -206,7 +189,7 @@ class Testing:
             num_epochs (int): Total number of epochs to be trained
             model (nn.Module): model being trained
 
-        Returns: np.array of test output
+        Returns: List of phoneme strings
 
         """
         logging.info(f'Running epoch {epoch}/{num_epochs} of testing...')
@@ -225,22 +208,19 @@ class Testing:
                 inputs, targets = self.devicehandler.move_data_to_device(model, inputs, None)
 
                 # compute forward pass
-                out,lengths_out = model.forward(inputs, input_lengths, i,phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
+                out, lengths_out = model.forward(inputs, input_lengths, i, phase)  # (N_TIMESTEPS,BATCHSIZE,N_LABELS)
 
                 # capture output for mini-batch
                 out = out.cpu().detach()  # extract from gpu if necessary
 
                 # decode output
-                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode, input_lengths, i)
+                beam_results, beam_scores, timesteps, out_lens = decode_output(out, ctcdecode, input_lengths)
 
-                # convert to strings using phoneme map (not phoneme list)
+                # convert to strings using phoneme map
                 n = beam_results.shape[0]
-
                 for i in range(n):
                     out_converted = out_to_phonemes(i, beam_results, out_lens, pl.PHONEME_MAP)
                     converted_str = convert_to_string(out_converted)
                     results.append(converted_str)
 
         return results
-
-

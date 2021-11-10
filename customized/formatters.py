@@ -33,12 +33,8 @@ class OutputFormatter:
 
         # convert string array to dataframe
         df = pd.DataFrame(out).reset_index(drop=False)
-        # logging.info('dataframe')
-        # logging.info(f'\n{df.head()}')
-        # logging.info(df.columns)
 
         # change column names
         df = df.rename(columns={0: 'label', 'index': 'id'})
-        # logging.info(f'\n{df.head()}')
 
         return df

@@ -10,9 +10,9 @@ from torch.utils.data import Dataset
 
 def collate_fn_trainval(batch):
     """
-
-    :param batch:  x=(N_TIMESTEPS,FEATURES),y=(UTTERANCE_LABEL_LENGTH,)
-    :return:
+    Format batch of training records for use in training phase or batch of validation records for use in validation phase.
+    :param batch (Tuple(Tensor,Tensor)): records to be formatted. Has shape x=(N_TIMESTEPS,FEATURES),y=(UTTERANCE_LABEL_LENGTH,)
+    :return: Tuple(Tensor,Tensor,Tensor,Tensor) representing (batch_x, batch_y, lengths_x, lengths_y)
     """
     # sort batch by decreasing sequence length for efficient packing
     batch = sorted(batch, key=lambda x: len(x[0]), reverse=True)
@@ -24,6 +24,7 @@ def collate_fn_trainval(batch):
     lengths_y = torch.LongTensor([len(y) for x, y in batch])
 
     # Pad sequences to have the same number of rows per utterance
+    # CTCLoss expects batch second, but batch first reduces number of tranpositions in the forward pass
     batch_x = pad_sequence(batch_x, batch_first=True)  # (BATCHSIZE,MAX_N_TIMESTEPS,FEATURES)
 
     # Pad targets to have the same number of elements per utterance
@@ -34,6 +35,9 @@ def collate_fn_trainval(batch):
 
 
 class TrainValDataset(Dataset):
+    """
+    Define a Dataset for training and validation data.
+    """
 
     # load the dataset
     def __init__(self, x, y):
@@ -53,12 +57,12 @@ class TrainValDataset(Dataset):
         return x, y
 
 
-# ?? why sort batch
 def collate_fn_test(batch):
     """
+    Format batch of records for use in testing phase.
 
-    :param batch: (N_TIMESTEPS,FEATURES)
-    :return:
+    :param batch (Tensor): records to be formatted. Has shape (N_TIMESTEPS,FEATURES)
+    :return: Tuple(Tensor,Tensor) representing (batch_x, lengths_x)
     """
     lengths_x = torch.LongTensor([len(x) for x in batch])
 
@@ -69,6 +73,9 @@ def collate_fn_test(batch):
 
 
 class TestDataset(Dataset):
+    """
+    Define Dataset for test data.
+    """
 
     # load the dataset
     def __init__(self, x):

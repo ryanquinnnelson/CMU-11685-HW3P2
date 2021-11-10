@@ -1,3 +1,7 @@
+"""
+Phoneme encoding for this data. Provided with dataset and copied here for convenience.
+"""
+
 N_PHONEMES = 41
 PHONEME_LIST = [
     " ",
