@@ -169,7 +169,7 @@ class StatsHandler:
         Args:
             wandbconnector (WandbConnector): connection to wandb
 
-        Returns:
+        Returns: None
 
         """
         logging.info('Reporting previous stats...')

@@ -41,7 +41,7 @@ class WandbConnector:
 
     def setup(self):
         """
-        Perform all steps needed to set up wandb. Create wandb directory, install wandb, and log in to wandb.
+        Perform all steps needed to set up wandb. Create wandb directory and log in to wandb.
         Returns: None
 
         """
@@ -70,8 +70,7 @@ class WandbConnector:
                               notes=self.notes,
                               tags=self.tags,
                               config=self.config,
-                              reinit=True)
-                              #mode='offline') # until online works again
+                              reinit=True)  # mode='offline')  # set this if online mode is failing
 
         return wandb.config
 

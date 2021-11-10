@@ -1,5 +1,5 @@
 """
-All things related to datasets that are not images.
+All things related to datasets that require customized classes for Training, Validation, and Testing data.
 """
 __author__ = 'ryanquinnnelson'
 
@@ -8,10 +8,27 @@ import logging
 import numpy as np
 
 
-# TODO: Remove slicing of dataset when ready
 class NumericalDatasetHandler:
     def __init__(self, data_dir, train_data, train_labels, val_data, val_labels, test_data, train_class, val_class,
                  test_class, train_collate_fn, val_collate_fn, test_collate_fn):
+        """
+        Initialize NumericalDatasetHandler.
+
+        :param data_dir (str): Fully-qualified path that is the root of data subdirectories.
+        :param train_data (str): Fully-qualified path to training data.
+        :param train_labels (str): Fully-qualified path to training labels.
+        :param val_data (str):  Fully-qualified path to validation data.
+        :param val_labels (str):  Fully-qualified path to validation labels.
+        :param test_data (str):  Fully-qualified path to test data.
+        :param train_class (Dataset): Dataset class representing training data.
+        :param val_class (Dataset):  Dataset class representing validation data.
+        :param test_class (Dataset):  Dataset class representing test data.
+        :param train_collate_fn (function): Collate function for training data.
+        :param val_collate_fn (function):  Collate function for validation data.
+        :param test_collate_fn (function):  Collate function for test data.
+        """
+        logging.info('Initializing numerical dataset handler...')
+
         self.data_dir = data_dir
         self.train_data = train_data
         self.train_labels = train_labels
@@ -24,9 +41,12 @@ class NumericalDatasetHandler:
         self.train_collate_fn = train_collate_fn
         self.val_collate_fn = val_collate_fn
         self.test_collate_fn = test_collate_fn
-        logging.info('Initializing numerical dataset handler...')
 
     def get_train_dataset(self):
+        """
+        Load training data into memory and initialize the Dataset object.
+        :return: Dataset
+        """
 
         # load data
         data = np.load(self.train_data, allow_pickle=True)
@@ -39,6 +59,10 @@ class NumericalDatasetHandler:
         return dataset
 
     def get_val_dataset(self):
+        """
+        Load validation data into memory and initialize the Dataset object.
+        :return: Dataset
+        """
 
         # load data
         data = np.load(self.val_data, allow_pickle=True)
@@ -51,6 +75,10 @@ class NumericalDatasetHandler:
         return dataset
 
     def get_test_dataset(self):
+        """
+        Load test data into memory and initialize the Dataset object.
+        :return: Dataset
+        """
 
         # load data
         data = np.load(self.test_data, allow_pickle=True)

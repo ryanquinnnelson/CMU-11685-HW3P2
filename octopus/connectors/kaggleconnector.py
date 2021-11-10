@@ -38,13 +38,12 @@ class KaggleConnector:
 
     def setup(self):
         """
-        Perform all tasks needed to set up kaggle in the local environment. Install kaggle, create kaggle root and
+        Perform all tasks needed to set up kaggle in the local environment. Create kaggle root and
         content directories, copy the "kaggle.json" api token to the kaggle root directory, and configure kaggle
         to use the content directory specified.
         Returns: None
 
         """
-
         logging.info('Setting up kaggle connection...')
 
         # create directories
@@ -62,7 +61,6 @@ class KaggleConnector:
         """
         Download data associated with the kaggle competition.
         Returns: None
-
         """
 
         if not os.path.isdir(self.competition_dir):
